@@ -54,6 +54,9 @@ export class Assets {
     m.cabDark    = this._stdMat(P.cabDark, { roughness: 0.6, metalness: 0.3 });
     m.cabAccent  = this._stdMat(P.cabAccent, { roughness: 0.5, metalness: 0.2, emissive: P.cabAccent, emissiveIntensity: 0.15 });
     m.cabMetal   = this._stdMat(P.cabMetal, { roughness: 0.4, metalness: 0.55 });
+    m.dialFace   = this._stdMat(0x14180f, { roughness: 0.5, metalness: 0.2 }); // dark face for contrast
+    m.dialTick   = this._stdMat(0xb9c4a6, { roughness: 0.6 });
+    m.needle     = this._stdMat(0xffd24a, { roughness: 0.4, emissive: 0xffb000, emissiveIntensity: 0.5 }); // bright, readable
     // Scenery
     m.soil       = this._stdMat(0xffffff, { roughness: 1.0 }); // map applied in createGround
     m.grass      = this._stdMat(P.grass, { roughness: 0.95 });
@@ -74,7 +77,7 @@ export class Assets {
     const g = this.geo;
     // Crop / weed parts
     g.carrotBody = new THREE.ConeGeometry(0.34, 1.15, 8);
-    g.carrotLeaf = new THREE.ConeGeometry(0.06, 0.55, 5);
+    g.carrotLeaf = new THREE.ConeGeometry(0.075, 0.7, 5);
     g.weedBulb   = new THREE.IcosahedronGeometry(0.27, 0);
     g.weedBlade  = new THREE.ConeGeometry(0.055, 0.7, 4);
     g.weedFlower = new THREE.IcosahedronGeometry(0.1, 0);
@@ -87,10 +90,12 @@ export class Assets {
     g.hill   = new THREE.ConeGeometry(9, 4.5, 7);
     // Cab pieces (unit boxes, sized via scale at layout time)
     g.box    = new THREE.BoxGeometry(1, 1, 1);
-    g.dial   = new THREE.TorusGeometry(0.16, 0.04, 6, 14);
-    g.dialFace = new THREE.CircleGeometry(0.15, 14);
-    g.needle = new THREE.BoxGeometry(0.015, 0.12, 0.01);
-    g.wheel  = new THREE.TorusGeometry(0.32, 0.05, 6, 18);
+    g.dial   = new THREE.TorusGeometry(0.17, 0.03, 8, 22);
+    g.dialFace = new THREE.CircleGeometry(0.16, 22);
+    g.dialHub = new THREE.CircleGeometry(0.04, 14);
+    g.dialTick = new THREE.BoxGeometry(0.02, 0.05, 0.01);
+    g.needle = new THREE.BoxGeometry(0.028, 0.17, 0.022);
+    g.wheel  = new THREE.TorusGeometry(0.32, 0.05, 8, 22);
     // Particles
     g.chunk   = new THREE.TetrahedronGeometry(0.12, 0);
     g.sparkle = new THREE.OctahedronGeometry(0.09, 0);
@@ -101,22 +106,39 @@ export class Assets {
 
   createCarrot() {
     const g = new THREE.Group();
+    // Cone is 1.15 tall. Sink ~1/3 of the orange below ground (y=0):
+    //   tip ≈ -0.39, shoulders ≈ +0.77  → bottom third is in the soil.
     const body = new THREE.Mesh(this.geo.carrotBody, this.mat.carrotBody);
     body.rotation.x = Math.PI;        // point the root DOWN
-    body.position.y = 0.4;            // tip ~ -0.18 (in soil), shoulders ~ 0.98
+    body.position.y = 0.19;
     body.castShadow = true;
     g.add(body);
 
+    const shoulders = 0.19 + 1.15 / 2; // ≈ 0.77, top of the orange
     const top = new THREE.Group();
-    top.position.y = 0.98;
-    const leafN = 6;
-    for (let i = 0; i < leafN; i++) {
+    top.position.y = shoulders - 0.06;
+
+    // A full, leafy crown: an outer ring of long blades + shorter inner ones.
+    const outer = 9;
+    for (let i = 0; i < outer; i++) {
       const leaf = new THREE.Mesh(this.geo.carrotLeaf, this.mat.carrotTop);
-      const a = (i / leafN) * Math.PI * 2;
-      leaf.position.set(Math.cos(a) * 0.08, 0.18, Math.sin(a) * 0.08);
-      leaf.rotation.z = Math.cos(a) * 0.5;
-      leaf.rotation.x = -Math.sin(a) * 0.5;
+      const a = (i / outer) * Math.PI * 2 + rand(-0.18, 0.18);
+      const tilt = rand(0.45, 0.95);
+      leaf.position.set(Math.cos(a) * 0.08, 0.2, Math.sin(a) * 0.08);
+      leaf.rotation.z = Math.cos(a) * tilt;
+      leaf.rotation.x = -Math.sin(a) * tilt;
+      leaf.scale.set(rand(0.85, 1.15), rand(0.9, 1.35), rand(0.85, 1.15));
       leaf.castShadow = true;
+      top.add(leaf);
+    }
+    const inner = 5;
+    for (let i = 0; i < inner; i++) {
+      const leaf = new THREE.Mesh(this.geo.carrotLeaf, this.mat.carrotTop);
+      const a = rand(0, Math.PI * 2);
+      leaf.position.set(Math.cos(a) * 0.035, 0.16, Math.sin(a) * 0.035);
+      leaf.rotation.z = Math.cos(a) * 0.28;
+      leaf.rotation.x = -Math.sin(a) * 0.28;
+      leaf.scale.set(0.8, rand(0.6, 0.95), 0.8);
       top.add(leaf);
     }
     g.add(top);
@@ -174,18 +196,33 @@ export class Assets {
     const accent = new THREE.Mesh(this.geo.box, M.cabAccent);
     cab.add(pillL, pillR, header, dash, dashTop, accent);
 
-    // Two dial gauges + a hint of a steering wheel, mounted on the dash group
+    // Two dial gauges + a hint of a steering wheel, mounted on the dash group.
+    // Parts are clearly separated in Z (face → bezel → ticks → needle → hub)
+    // so the bright needle reads instantly and never z-fights / flickers.
     const dials = new THREE.Group();
     for (let i = 0; i < 2; i++) {
-      const ring = new THREE.Mesh(this.geo.dial, M.cabMetal);
-      const face = new THREE.Mesh(this.geo.dialFace, M.cabAccent);
-      face.position.z = 0.005;
-      const needle = new THREE.Mesh(this.geo.needle, M.cabDark);
-      needle.position.y = 0.05;
       const gauge = new THREE.Group();
-      gauge.add(ring, face, needle);
+      const face = new THREE.Mesh(this.geo.dialFace, M.dialFace); // dark face
+      const ring = new THREE.Mesh(this.geo.dial, M.cabMetal);     // bezel
+      ring.position.z = 0.015;
+      // tick marks around the dial
+      for (let t = 0; t < 5; t++) {
+        const tick = new THREE.Mesh(this.geo.dialTick, M.dialTick);
+        const ta = -2.1 + t * 1.05;
+        tick.position.set(Math.sin(ta) * 0.125, Math.cos(ta) * 0.125, 0.02);
+        tick.rotation.z = -ta;
+        gauge.add(tick);
+      }
+      const needlePivot = new THREE.Group();
+      needlePivot.position.z = 0.045;
+      const needle = new THREE.Mesh(this.geo.needle, M.needle);   // bright needle
+      needle.position.y = 0.06;
+      needlePivot.add(needle);
+      const hub = new THREE.Mesh(this.geo.dialHub, M.cabMetal);
+      hub.position.z = 0.06;
+      gauge.add(face, ring, needlePivot, hub);
       gauge.position.x = i === 0 ? -0.55 : 0.55;
-      gauge.userData.needle = needle;
+      gauge.userData.needle = needlePivot;
       gauge.userData.phase = i * 1.3;
       dials.add(gauge);
     }
@@ -230,9 +267,9 @@ export class Assets {
     p.accent.scale.set((w + t) * 2.1, t * 0.28, t * 0.3);
     p.accent.rotation.x = -0.42;
 
-    p.dials.position.set(0, -h * 0.78, -d * 0.72);
+    p.dials.position.set(0, -h * 0.72, -d * 0.7);
     p.dials.rotation.x = -0.42;
-    const dialScale = Math.min(1, w / 1.9);
+    const dialScale = Math.max(0.7, Math.min(1.2, w / 1.6));
     p.dials.scale.setScalar(dialScale);
   }
 

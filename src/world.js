@@ -228,8 +228,9 @@ export class World {
       for (const gauge of dials.children) {
         if (gauge.userData && gauge.userData.needle) {
           const ph = gauge.userData.phase || 0;
+          // gentle, smooth idle sweep biased by speed (no jitter)
           gauge.userData.needle.rotation.z =
-            Math.sin(this.bobT * 2 + ph) * 0.5 - 0.3 - speedF * 0.15;
+            Math.sin(this.bobT * 1.1 + ph) * 0.28 - 0.15 - (speedF - 1) * 0.18;
         }
       }
       if (dials.userData.wheel) {

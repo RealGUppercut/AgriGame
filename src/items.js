@@ -100,9 +100,9 @@ export class Items {
       if (r.state === "alive") {
         r.z += speed * dt;
         r.mesh.position.z = r.z;
-        // gentle wind sway + tiny bob
+        // gentle wind sway (planted item; only a whisper of vertical motion)
         r.mesh.rotation.z = Math.sin(r.age * 2 + r.swayPhase) * 0.06;
-        r.mesh.position.y = Math.sin(r.age * 3 + r.swayPhase) * 0.03;
+        r.mesh.position.y = Math.sin(r.age * 3 + r.swayPhase) * 0.012;
 
         if (!r.passedReported && r.z > this.zFar) {
           r.passedReported = true;
