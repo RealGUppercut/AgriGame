@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#3c82c4" />
+  <title>Crop Vision — Precision Harvest Challenge (offline)</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <!--
+    OFFLINE / file:// FALLBACK BUILD.
+    This page loads a single pre-bundled classic script (dist/cropvision.bundle.js)
+    that already contains the game AND Three.js, so it opens straight off the
+    filesystem with NO server and NO import map.
+
+    The recommended path is still index.html served over http (see README.md);
+    use this only when you cannot run a local server. To regenerate the bundle:
+        npm install esbuild  &&  node tools/build-offline.mjs
+  -->
+</head>
+<body>
+  <canvas id="scene-canvas"></canvas>
+
+  <div id="ui-root">
+    <div id="flash-overlay"></div>
+    <div id="vignette"></div>
+    <div id="floaters-layer"></div>
+
+    <div id="hud" class="screen-layer hidden">
+      <div id="hud-top">
+        <div id="score-box">
+          <div class="hud-label">SCORE</div>
+          <div id="score-value">0</div>
+        </div>
+        <div id="timer-wrap">
+          <div id="timer-bar"><div id="timer-fill"></div></div>
+        </div>
+        <div id="combo-box" class="hidden">
+          <div id="combo-mult">x1</div>
+          <div id="combo-count">0 combo</div>
+        </div>
+      </div>
+      <div id="touch-controls">
+        <button id="btn-harvest" class="action-btn harvest" type="button" aria-label="Harvest the carrot">
+          <span class="btn-title">HARVEST</span>
+          <span class="btn-key">&#9664; / A</span>
+        </button>
+        <button id="btn-remove" class="action-btn remove" type="button" aria-label="Remove the weed">
+          <span class="btn-title">REMOVE</span>
+          <span class="btn-key">&#9654; / L</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="attract-screen" class="screen-layer hidden">
+      <div class="panel attract-panel">
+        <h1 class="game-title">CROP<span class="title-accent">VISION</span></h1>
+        <p class="tagline">Real harvesters use AI cameras to tell crops from weeds in a split second&nbsp;&mdash; now it&rsquo;s your turn.</p>
+        <div class="legend">
+          <div class="legend-item">
+            <span class="legend-swatch carrot-swatch"></span>
+            <div><b>HARVEST</b> the carrots<br><span class="legend-keys">&#9664; Left&nbsp;&middot;&nbsp;A</span></div>
+          </div>
+          <div class="legend-item">
+            <span class="legend-swatch weed-swatch"></span>
+            <div><b>REMOVE</b> the weeds<br><span class="legend-keys">&#9654; Right&nbsp;&middot;&nbsp;L</span></div>
+          </div>
+        </div>
+        <div id="attract-scores" class="topscores"></div>
+        <button id="btn-start" class="big-cta" type="button">
+          <span class="cta-main">TAP&nbsp;/&nbsp;PRESS TO START</span>
+          <span class="cta-sub">60-second harvest run</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="results-screen" class="screen-layer hidden">
+      <div class="panel results-panel">
+        <div id="results-rating" class="rating">Master Harvester!</div>
+        <div class="results-grid">
+          <div class="result-stat">
+            <div class="hud-label">SCORE</div>
+            <div id="results-score" class="big-num">0</div>
+          </div>
+          <div class="result-stat">
+            <div class="hud-label">BEST COMBO</div>
+            <div id="results-combo" class="big-num">0</div>
+          </div>
+        </div>
+        <div id="results-newbest" class="newbest hidden">NEW PERSONAL BEST!</div>
+        <div class="didyouknow">
+          <div class="dyk-title">Did you know?</div>
+          <div id="dyk-text">&nbsp;</div>
+        </div>
+        <div id="results-scores" class="topscores"></div>
+        <button id="btn-again" class="big-cta" type="button">
+          <span class="cta-main">PLAY AGAIN</span>
+          <span class="cta-sub">Tap / Press any key</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="loading-screen" class="screen-layer">
+      <div class="loading-inner">
+        <div class="loading-title">CROP VISION</div>
+        <div class="loading-track"><div id="loading-bar"></div></div>
+        <div id="loading-text">Growing the field&hellip;</div>
+      </div>
+    </div>
+
+    <button id="sound-toggle" type="button" aria-label="Toggle sound">
+      <span class="spk-icon" aria-hidden="true"></span>
+      <span id="sound-label">SOUND&nbsp;OFF</span>
+    </button>
+
+    <div id="error-screen" class="screen-layer hidden">
+      <div class="panel">
+        <h2>Hmm, something went wrong.</h2>
+        <p id="error-text"></p>
+        <button class="big-cta" type="button" onclick="location.reload()">
+          <span class="cta-main">RELOAD</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./dist/cropvision.bundle.js"></script>
+</body>
+</html>
