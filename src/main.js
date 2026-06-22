@@ -91,6 +91,19 @@ async function boot() {
     });
   }
 
+  // ---- Results-screen name / organisation entry (saves live as they type) ----
+  const nameInput = document.getElementById("name-input");
+  const orgInput = document.getElementById("org-input");
+  const onNameInput = () => {
+    game.noteInput();
+    game.updatePending(
+      nameInput ? nameInput.value : "",
+      orgInput ? orgInput.value : ""
+    );
+  };
+  if (nameInput) nameInput.addEventListener("input", onNameInput);
+  if (orgInput) orgInput.addEventListener("input", onNameInput);
+
   // ---- Resize / orientation ----
   window.addEventListener("resize", () => sceneMgr.resize());
   window.addEventListener("orientationchange", () => setTimeout(() => sceneMgr.resize(), 200));

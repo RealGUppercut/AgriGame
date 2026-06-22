@@ -221,6 +221,7 @@ html, body {
   margin-bottom: 12px;
   animation: cta-pulse 1s ease-in-out infinite;
 }
+.newbest.hidden { display: none; }
 .didyouknow {
   background: rgba(0,0,0,0.22);
   border-left: 5px solid var(--carrot-top);
@@ -233,10 +234,44 @@ html, body {
 .dyk-title { color: var(--carrot-top); font-weight: 700; margin-bottom: 4px; }
 #dyk-text  { font-size: clamp(14px, 2.1vw, 18px); font-weight: 500; line-height: 1.4; }
 
+/* ---- Player name / organisation entry (results screen) ------------------- */
+.name-entry {
+  margin: 6px auto 12px;
+  max-width: 26em;
+}
+.name-entry.hidden { display: none; }
+.ne-title {
+  color: var(--carrot-top);
+  font-weight: 700;
+  font-size: clamp(13px, 2vw, 17px);
+  margin-bottom: 8px;
+}
+.ne-fields { display: flex; flex-direction: column; gap: 8px; }
+.ne-input {
+  pointer-events: auto;
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: clamp(15px, 2.4vw, 19px);
+  text-align: center;
+  outline: none;
+}
+.ne-input::placeholder { color: rgba(255, 255, 255, 0.5); font-weight: 500; }
+.ne-input:focus {
+  border-color: var(--gold);
+  background: rgba(0, 0, 0, 0.42);
+  box-shadow: 0 0 0 3px rgba(255, 201, 77, 0.28);
+}
+
 /* ---- Top scores table ----------------------------------------------------- */
 .topscores {
   margin: 6px auto 4px;
-  max-width: 22em;
+  max-width: 26em;
   font-size: clamp(13px, 2vw, 17px);
 }
 .topscores .ts-title {
@@ -247,13 +282,23 @@ html, body {
 }
 .ts-row {
   display: flex;
-  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
   padding: 3px 10px;
   border-radius: 7px;
 }
 .ts-row.you { background: rgba(255, 201, 77, 0.22); }
-.ts-rank { opacity: 0.7; width: 2em; text-align: left; }
-.ts-score { font-weight: 700; }
+.ts-rank { opacity: 0.7; width: 1.8em; flex: 0 0 auto; text-align: left; }
+.ts-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ts-org { font-size: 0.78em; opacity: 0.6; }
+.ts-score { font-weight: 700; flex: 0 0 auto; margin-left: auto; }
 .ts-empty { opacity: 0.6; font-weight: 500; }
 
 /* ====================== IN-GAME HUD ======================================= */

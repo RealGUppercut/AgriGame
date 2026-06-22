@@ -145,7 +145,9 @@ size in `src/scene.js`.
   on tab-hide, resumes cleanly), **WebGL context loss/restore**, long idling, and
   rapid restarts — no crashes, no state leaking between rounds.
 - `localStorage` for "Today's Top Scores" (top 5, auto-resets each day) with an
-  in-memory fallback if storage is unavailable.
+  in-memory fallback if storage is unavailable. When a run makes the board, the
+  results screen invites the player to enter a **name** and optional
+  **school / club**, saved live as they type and shown on the leaderboard.
 - Sound is **off by default** (synthesized SFX, no files, no autoplay) with a toggle;
   the game never relies on audio for clarity.
 

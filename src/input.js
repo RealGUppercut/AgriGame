@@ -13,6 +13,16 @@ export function initInput(handlers) {
   // ---- Keyboard ----
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
+
+    // If a text field is focused (results-screen name/org entry), let the field
+    // handle typing — don't hijack letters/space as game actions.
+    const ae = document.activeElement;
+    if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) {
+      any(); // typing still counts as activity (resets the kiosk idle timer)
+      if (e.key === "Enter") { e.preventDefault(); ae.blur(); h.onStart && h.onStart(); }
+      return;
+    }
+
     const k = e.key;
     if (k === "ArrowLeft" || k === "a" || k === "A") {
       e.preventDefault(); any(); h.onHarvest && h.onHarvest();
@@ -41,14 +51,13 @@ export function initInput(handlers) {
   bind("btn-start", () => h.onStart && h.onStart());
   bind("btn-again", () => h.onStart && h.onStart());
 
-  // Tap anywhere on the attract / results panels to start (guarded in game)
-  const tapStart = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener("pointerdown", () => { any(); h.onStart && h.onStart(); });
-  };
-  tapStart("attract-screen");
-  tapStart("results-screen");
+  // Tap anywhere on the attract screen to start (guarded in game).
+  // NOTE: the results screen does NOT get tap-to-start — it has name/org fields,
+  // and a stray tap must not launch a new round. Use the Play Again button.
+  const attract = document.getElementById("attract-screen");
+  if (attract) {
+    attract.addEventListener("pointerdown", () => { any(); h.onStart && h.onStart(); });
+  }
 
   // Kiosk hardening: no context menu, no drag, no double-tap zoom artefacts
   window.addEventListener("contextmenu", (e) => e.preventDefault());

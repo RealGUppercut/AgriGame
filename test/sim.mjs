@@ -28,7 +28,7 @@ const fakeWorld = { update() {}, reset() {}, setIntensity() {}, addShake() {}, l
 const fakeHud = {
   setScore() {}, setCombo() {}, resetCombo() {}, setTimer() {}, flashGood() {}, flashBad() {},
   buttonFeedback() {}, showScreen() {}, showAttractScores() {}, showResults() {},
-  showCountdown() {}, hideCountdown() {},
+  refreshResultsBoard() {}, showCountdown() {}, hideCountdown() {},
 };
 const fakeAudio = { muted: true, unlock() {}, start() {}, harvest() {}, remove() {}, combo() {}, miss() {}, tick() {}, go() {}, results() {}, resume() {}, toggle() { return true; } };
 const fakeParticles = { burst() {}, update() {}, reset() {} };
@@ -190,9 +190,35 @@ console.log("\n[8] Difficulty values stay finite & sane");
 
 console.log("\n[9] Storage works without a real localStorage (memory fallback)");
 {
-  const res = storage.addScore(1234, 7);
+  const res = storage.addScore(1234, 7, "Ada", "Norwich High");
   ok(res.scores.length >= 1, "addScore returns a board");
-  ok(storage.getTopScores().some((s) => s.score === 1234), "score is retrievable");
+  const got = storage.getTopScores().find((s) => s.ts === res.ts);
+  ok(got && got.score === 1234, "score is retrievable");
+  ok(got && got.name === "Ada" && got.org === "Norwich High", "name + org stored");
+  const board = storage.updateScore(res.ts, "Ada L", "Norwich");
+  ok(board.find((s) => s.ts === res.ts).name === "Ada L", "updateScore renames live");
+  // sanitisation: trims, collapses spaces, length-limits (use a top score so
+  // the entry is guaranteed on the board and unambiguous)
+  const r2 = storage.addScore(9999999, 1, "   Bobby   Tables   ", "x".repeat(60));
+  const e2 = r2.scores.find((s) => s.ts === r2.ts && s.score === 9999999);
+  ok(e2 && e2.name === "Bobby Tables" && e2.org.length <= 28, "name/org cleaned & capped");
+}
+
+console.log("\n[10] Results name flow via game.updatePending");
+{
+  const { game, items } = makeGame();
+  game.enterAttract(); game.start(); reachPlaying(game, items);
+  // score a few points so the run makes the (empty) board
+  for (let i = 0; i < Math.round(6 / DT); i++) frame(game, items, true);
+  run(game, items, TUNE.round.durationSec + 1, true);
+  ok(game.state === "results", "reached results");
+  ok(game.pendingTs != null, "pending entry exists for naming");
+  game.updatePending("Sam", "STEM Club");
+  const mine = storage.getTopScores().find((s) => s.ts === game.pendingTs);
+  ok(mine && mine.name === "Sam" && mine.org === "STEM Club", "typed name/org saved to entry");
+  // starting again clears the pending entry and doesn't throw (document guarded)
+  game.start();
+  ok(game.pendingTs === null && game.state === "countdown", "Play Again clears pending & restarts");
 }
 
 console.log("\n" + (failures === 0 ? "ALL CHECKS PASSED ✅" : failures + " CHECK(S) FAILED ❌"));

@@ -30,6 +30,7 @@ export class Game {
     this.demoTimer = 0;
     this.countdownT = 0;
     this._goShown = false;
+    this.pendingTs = null; // results-screen entry being named
     this.lastInput = this._now();
   }
 
@@ -51,6 +52,12 @@ export class Game {
 
   start() {
     if (this.state !== "attract" && this.state !== "results") return;
+    // drop focus from any name field so gameplay keys aren't typed into it
+    if (typeof document !== "undefined" &&
+        document.activeElement && document.activeElement.blur) {
+      document.activeElement.blur();
+    }
+    this.pendingTs = null;
     this.audio.unlock();
     this.audio.start();
     this._clearField();
@@ -88,19 +95,28 @@ export class Game {
     this.world.setIntensity(0);
     this.scene.setIntensity(0);
 
-    const res = this.storage.addScore(this.score, this.bestCombo);
-    const highlightTs = res.rank > 0 ? res.scores[res.rank - 1].ts : null;
+    const res = this.storage.addScore(this.score, this.bestCombo, "", "");
+    this.pendingTs = res.rank > 0 ? res.ts : null;
     this.hud.showResults({
       score: this.score,
       bestCombo: this.bestCombo,
       isBest: res.isBest,
       scores: res.scores,
-      highlightTs,
+      highlightTs: res.ts,
+      madeBoard: res.rank > 0,
+      rank: res.rank,
     });
     this.hud.showScreen("results");
     this.audio.results();
     this.items.reset();
     this.noteInput();
+  }
+
+  /** Live-save the player's name/org as they type on the results screen. */
+  updatePending(name, org) {
+    if (!this.pendingTs) return;
+    const scores = this.storage.updateScore(this.pendingTs, name, org);
+    this.hud.refreshResultsBoard(scores, this.pendingTs);
   }
 
   _clearField() {

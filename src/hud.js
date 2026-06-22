@@ -29,6 +29,9 @@ export class HUD {
     this.btnRemove = $("btn-remove");
     this.soundLabel = $("sound-label");
     this.soundToggle = $("sound-toggle");
+    this.nameEntry = $("name-entry");
+    this.nameInput = $("name-input");
+    this.orgInput = $("org-input");
 
     this._lastMult = 1;
     document.body.classList.add("show-sound");
@@ -130,12 +133,27 @@ export class HUD {
     return label;
   }
 
-  showResults({ score, bestCombo, isBest, scores, highlightTs }) {
+  showResults({ score, bestCombo, isBest, scores, highlightTs, madeBoard }) {
     $("results-rating").textContent = this.ratingFor(score);
     $("results-score").textContent = fmt(score);
     $("results-combo").textContent = fmt(bestCombo);
     $("results-newbest").classList.toggle("hidden", !isBest);
     $("dyk-text").innerHTML = FACTS[(Math.random() * FACTS.length) | 0];
+
+    // Name entry only when the run made the visible board.
+    if (this.nameEntry) this.nameEntry.classList.toggle("hidden", !madeBoard);
+    if (this.nameInput) this.nameInput.value = "";
+    if (this.orgInput) this.orgInput.value = "";
+
+    this.renderTopScores($("results-scores"), scores, highlightTs);
+
+    if (madeBoard && this.nameInput) {
+      // gently focus so the on-screen keyboard is ready for name entry
+      setTimeout(() => { try { this.nameInput.focus(); } catch (_) {} }, 350);
+    }
+  }
+
+  refreshResultsBoard(scores, highlightTs) {
     this.renderTopScores($("results-scores"), scores, highlightTs);
   }
 
@@ -144,20 +162,53 @@ export class HUD {
     this.renderTopScores($("attract-scores"), scores, null);
   }
 
+  // Builds the board with DOM nodes (textContent) so player names can never
+  // break layout or inject markup.
   renderTopScores(container, scores, highlightTs) {
     if (!container) return;
-    let html = '<div class="ts-title">TODAY&rsquo;S TOP SCORES</div>';
+    container.textContent = "";
+    const title = document.createElement("div");
+    title.className = "ts-title";
+    title.textContent = "TODAY'S TOP SCORES";
+    container.appendChild(title);
+
     if (!scores || scores.length === 0) {
-      html += '<div class="ts-empty">Be the first on the board!</div>';
-    } else {
-      for (let i = 0; i < scores.length; i++) {
-        const s = scores[i];
-        const you = highlightTs && s.ts === highlightTs ? " you" : "";
-        html += `<div class="ts-row${you}"><span class="ts-rank">${i + 1}</span>` +
-                `<span class="ts-score">${fmt(s.score)}</span></div>`;
-      }
+      const e = document.createElement("div");
+      e.className = "ts-empty";
+      e.textContent = "Be the first on the board!";
+      container.appendChild(e);
+      return;
     }
-    container.innerHTML = html;
+
+    for (let i = 0; i < scores.length; i++) {
+      const s = scores[i];
+      const row = document.createElement("div");
+      row.className = "ts-row" + (highlightTs && s.ts === highlightTs ? " you" : "");
+
+      const rank = document.createElement("span");
+      rank.className = "ts-rank";
+      rank.textContent = (i + 1) + ".";
+
+      const name = document.createElement("span");
+      name.className = "ts-name";
+      name.textContent = s.name ? s.name : "—"; // em dash if unnamed
+      if (s.org) {
+        const org = document.createElement("span");
+        org.className = "ts-org";
+        org.textContent = s.org;
+        name.appendChild(document.createTextNode(" "));
+        name.appendChild(org);
+      }
+
+      const sc = document.createElement("span");
+      sc.className = "ts-score";
+      sc.textContent = fmt(s.score);
+
+      row.appendChild(rank);
+      row.appendChild(name);
+      row.appendChild(sc);
+      container.appendChild(row);
+    }
   }
 
   showError(msg) {

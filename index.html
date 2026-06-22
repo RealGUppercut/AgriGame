@@ -107,12 +107,25 @@
 
         <div id="results-newbest" class="newbest hidden">NEW PERSONAL BEST!</div>
 
+        <div id="name-entry" class="name-entry hidden">
+          <div class="ne-title">You made the board! Add your name</div>
+          <div class="ne-fields">
+            <input id="name-input" class="ne-input" type="text" maxlength="14"
+                   placeholder="Your name" autocomplete="off" autocapitalize="words"
+                   autocorrect="off" spellcheck="false" enterkeyhint="done" aria-label="Your name" />
+            <input id="org-input" class="ne-input" type="text" maxlength="28"
+                   placeholder="School / club (optional)" autocomplete="off"
+                   autocapitalize="words" autocorrect="off" spellcheck="false"
+                   enterkeyhint="done" aria-label="School or club (optional)" />
+          </div>
+        </div>
+
+        <div id="results-scores" class="topscores"></div>
+
         <div class="didyouknow">
           <div class="dyk-title">Did you know?</div>
           <div id="dyk-text">&nbsp;</div>
         </div>
-
-        <div id="results-scores" class="topscores"></div>
 
         <button id="btn-again" class="big-cta" type="button">
           <span class="cta-main">PLAY AGAIN</span>
