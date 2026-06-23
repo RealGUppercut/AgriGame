@@ -1,65 +1,95 @@
 /* ============================================================================
- * Input — keyboard + touch/pointer, mapped to two actions.
- *   Harvest : ArrowLeft  / A   or the green on-screen button
- *   Remove  : ArrowRight / L   or the red on-screen button
- *   Start / advance menus : Space / Enter / tap.
- * The game decides what each action means for the current screen.
+ * Input — keyboard + touch/pointer for Solo and Crop Battle.
+ *
+ *   Solo  : Harvest = ArrowLeft / A,  Remove = ArrowRight / L
+ *   Battle: Player 1 = A (harvest) / D (remove)
+ *           Player 2 = ArrowLeft (harvest) / ArrowRight (remove)
+ *           (two USB keyboards both type everything, so each player just uses
+ *            their own distinct keys)
+ *   Esc   : quit the current game back to the welcome screen.
+ *
+ * Returns { setMode } so the game can swap the active key map per mode.
  * ========================================================================== */
+
+import { TUNE } from "./config.js";
+
+function buildMap(mode) {
+  const m = {};
+  const add = (keys, p, k) => keys.forEach((key) => { m[key] = [p, k]; });
+  if (mode === "battle") {
+    add(TUNE.battle.keysP1.harvest, 0, "harvest");
+    add(TUNE.battle.keysP1.remove, 0, "remove");
+    add(TUNE.battle.keysP2.harvest, 1, "harvest");
+    add(TUNE.battle.keysP2.remove, 1, "remove");
+  } else {
+    add(["a", "A", "ArrowLeft"], 0, "harvest");
+    add(["l", "L", "ArrowRight"], 0, "remove");
+  }
+  return m;
+}
 
 export function initInput(handlers) {
   const h = handlers;
   const any = () => h.onAnyInput && h.onAnyInput();
+  let keymap = buildMap("solo");
 
-  // ---- Keyboard ----
   window.addEventListener("keydown", (e) => {
     if (e.repeat) return;
 
-    // If a text field is focused (results-screen name/org entry), let the field
-    // handle typing — don't hijack letters/space as game actions.
+    // Let text fields (results name entry) keep their keystrokes.
     const ae = document.activeElement;
     if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) {
-      any(); // typing still counts as activity (resets the kiosk idle timer)
+      any();
       if (e.key === "Enter") { e.preventDefault(); ae.blur(); h.onStart && h.onStart(); }
       return;
     }
 
-    const k = e.key;
-    if (k === "ArrowLeft" || k === "a" || k === "A") {
-      e.preventDefault(); any(); h.onHarvest && h.onHarvest();
-    } else if (k === "ArrowRight" || k === "l" || k === "L") {
-      e.preventDefault(); any(); h.onRemove && h.onRemove();
-    } else if (k === " " || k === "Enter" || k === "Spacebar") {
-      e.preventDefault(); any(); h.onStart && h.onStart();
-    } else {
-      any(); // any other key still counts as activity / advances menus
-      h.onStart && h.onStart();
+    if (e.key === "Escape") { e.preventDefault(); any(); h.onEscape && h.onEscape(); return; }
+
+    const m = keymap[e.key];
+    if (m) { e.preventDefault(); any(); h.onAction && h.onAction(m[0], m[1]); return; }
+
+    if (e.key === "1") { any(); h.onSelectMode && h.onSelectMode("solo"); return; }
+    if (e.key === "2") { any(); h.onSelectMode && h.onSelectMode("battle"); return; }
+
+    if (e.key === " " || e.key === "Enter" || e.key === "Spacebar") {
+      e.preventDefault(); any(); h.onStart && h.onStart(); return;
     }
+    // Any other key counts as activity and advances menus (no preventDefault,
+    // so F11 fullscreen etc. still work).
+    any();
+    h.onStart && h.onStart();
   }, { passive: false });
 
   // ---- Pointer buttons ----
   const bind = (id, fn) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      any();
-      fn();
-    });
+    el.addEventListener("pointerdown", (e) => { e.preventDefault(); any(); fn(); });
   };
-  bind("btn-harvest", () => h.onHarvest && h.onHarvest());
-  bind("btn-remove", () => h.onRemove && h.onRemove());
+  bind("p1-harvest", () => h.onAction && h.onAction(0, "harvest"));
+  bind("p1-remove", () => h.onAction && h.onAction(0, "remove"));
+  bind("p2-harvest", () => h.onAction && h.onAction(1, "harvest"));
+  bind("p2-remove", () => h.onAction && h.onAction(1, "remove"));
+
   bind("btn-start", () => h.onStart && h.onStart());
   bind("btn-again", () => h.onStart && h.onStart());
+  bind("btn-rematch", () => h.onStart && h.onStart());
+  bind("btn-solo", () => h.onSelectMode && h.onSelectMode("solo"));
+  bind("btn-battle", () => h.onSelectMode && h.onSelectMode("battle"));
+  bind("btn-mode-back", () => h.onHome && h.onHome());
+  bind("btn-results-menu", () => h.onHome && h.onHome());
+  bind("btn-battle-menu", () => h.onHome && h.onHome());
 
-  // Tap anywhere on the attract screen to start (guarded in game).
-  // NOTE: the results screen does NOT get tap-to-start — it has name/org fields,
-  // and a stray tap must not launch a new round. Use the Play Again button.
+  // Tap the welcome screen to advance (guarded in game). Results/battle screens
+  // use their explicit buttons (they contain form fields / multiple choices).
   const attract = document.getElementById("attract-screen");
-  if (attract) {
-    attract.addEventListener("pointerdown", () => { any(); h.onStart && h.onStart(); });
-  }
+  if (attract) attract.addEventListener("pointerdown", () => { any(); h.onStart && h.onStart(); });
 
-  // Kiosk hardening: no context menu, no drag, no double-tap zoom artefacts
   window.addEventListener("contextmenu", (e) => e.preventDefault());
   window.addEventListener("dragstart", (e) => e.preventDefault());
+
+  return {
+    setMode(mode) { keymap = buildMap(mode); },
+  };
 }

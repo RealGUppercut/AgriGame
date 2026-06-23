@@ -40,17 +40,22 @@ export const TUNE = {
   },
 
   scoring: {
-    basePoints:     100,    // points for a correct action (before multiplier)
+    basePoints:     100,    // flat points for any correct action
     missPenalty:    0,      // points lost on a miss (kept at 0 for kids)
-    comboPerMult:   4,      // every N successes in a row adds +1 to multiplier
-    maxMultiplier:  8,      // multiplier cap
+    // ---- Streak bonuses (the ONLY score growth; no runaway multiplier) -----
+    // Every `bonusEvery` correct-in-a-row awards a small flat bonus. The bonus
+    // grows a little per milestone but is capped, so a lead only becomes large
+    // with VERY high sustained accuracy (any miss resets the streak).
+    streakBonusEvery: 5,    // award a bonus every N in a row
+    streakBonusStep:  20,   // bonus = step * milestone#  (1st=20, 2nd=40, ...)
+    streakBonusMax:   120,  // ...capped here
   },
 
-  combo: {
-    // Combo also speeds the field up a little for rising intensity.
-    speedPerCombo:  0.018,  // +1.8% speed per combo step
-    speedMaxMul:    1.45,   // capped extra speed from combo
-    intensityFull:  18,     // combo count at which "intensity" visuals max out
+  streak: {
+    // The streak also nudges the field a little faster for rising intensity.
+    speedPerStreak: 0.010,  // +1.0% speed per point of streak
+    speedMaxMul:    1.30,   // capped extra speed from the streak
+    intensityFull:  18,     // streak at which "intensity" visuals max out
   },
 
   spawn: {
@@ -59,7 +64,32 @@ export const TUNE = {
     startZ: -62,            // where items appear (far down the row)
     despawnZ: 9,            // behind the camera: recycle here
   },
+
+  battle: {
+    // Crop Battle: same spawns for both players; only the cab bob differs so
+    // each player feels they're in their own vehicle.
+    bobPhaseOffset: Math.PI,     // P2's bob is in anti-phase with P1's
+    bobAmpScale:    [1.0, 0.82], // and a slightly different amplitude
+    bobHzScale:     [1.0, 1.12], // ...and rate
+    // Distinct key sets (two USB keyboards: each player presses only their own).
+    keysP1: { harvest: ["a", "A"], remove: ["d", "D"] },
+    keysP2: { harvest: ["ArrowLeft"], remove: ["ArrowRight"] },
+  },
 };
+
+/* Encouraging crop-pun toasts for each streak-bonus milestone (cycled). */
+export const STREAK_PUNS = [
+  "Lettuce-go!",
+  "On a roll!",
+  "Outstanding in your field!",
+  "A-maize-ing!",
+  "Unbe-leaf-able!",
+  "Kale yeah!",
+  "Turnip the heat!",
+  "You're a-peeling!",
+  "Plant-tastic!",
+  "Soil good!",
+];
 
 /* ----------------------------------------------------------------------------
  * Below: presentation / world constants. Safe to leave alone, but documented.

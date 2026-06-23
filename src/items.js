@@ -8,9 +8,15 @@
 import { TUNE, POOL } from "./config.js";
 import { easeOutBack, easeOutCubic, clamp } from "./utils.js";
 
+/** Put an object and all its descendants on a single render layer. */
+function setLayerDeep(obj, layer) {
+  obj.traverse((o) => o.layers.set(layer));
+}
+
 export class Items {
-  constructor(sceneMgr, assets) {
+  constructor(sceneMgr, assets, layer = 1) {
     this.assets = assets;
+    this.layer = layer;
     this.active = [];
     this.freeCarrots = [];
     this.freeWeeds = [];
@@ -18,12 +24,14 @@ export class Items {
     for (let i = 0; i < POOL.carrots; i++) {
       const m = assets.createCarrot();
       m.visible = false;
+      setLayerDeep(m, layer);
       sceneMgr.add(m);
       this.freeCarrots.push(m);
     }
     for (let i = 0; i < POOL.weeds; i++) {
       const m = assets.createWeed();
       m.visible = false;
+      setLayerDeep(m, layer);
       sceneMgr.add(m);
       this.freeWeeds.push(m);
     }
@@ -32,25 +40,35 @@ export class Items {
     this.zFar = TUNE.zone.centerZ + TUNE.zone.halfDepth;
   }
 
+  /** Toggle shadow casting (off in split-screen to avoid cross-view leakage). */
+  setShadow(on) {
+    const apply = (m) => m.traverse((o) => { if (o.isMesh) o.castShadow = on; });
+    this.freeCarrots.forEach(apply);
+    this.freeWeeds.forEach(apply);
+    this.active.forEach((r) => apply(r.mesh));
+  }
+
   get zoneCenter() { return TUNE.zone.centerZ; }
 
-  spawn(type, lane) {
+  spawn(type, lane, opts = {}) {
     const pool = type === "weed" ? this.freeWeeds : this.freeCarrots;
     const mesh = pool.pop();
     if (!mesh) return null; // pool exhausted → skip safely
 
     const x = TUNE.spawn.lanesX[lane];
+    const z = opts.z != null ? opts.z : TUNE.spawn.startZ;
+    const instant = !!opts.instant; // instant => full size, skip the grow-in
+
     mesh.visible = true;
-    mesh.position.set(x, 0, TUNE.spawn.startZ);
+    mesh.position.set(x, 0, z);
     mesh.rotation.set(0, 0, 0);
-    mesh.scale.setScalar(0.001);
+    mesh.scale.setScalar(instant ? 1 : 0.001);
 
     const rec = {
-      type, mesh, x,
-      z: TUNE.spawn.startZ,
+      type, mesh, x, z,
       handled: false,
       state: "alive",
-      age: 0,
+      age: instant ? 1 : 0,
       animT: 0,
       swayPhase: Math.random() * 6.28,
       passedReported: false,

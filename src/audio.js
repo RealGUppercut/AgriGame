@@ -115,12 +115,24 @@ export const audio = {
     } catch (_) {}
   },
 
-  /** Pitch rises with the combo level for escalating feedback. */
+  /** Pitch rises with the streak level for escalating feedback. */
   combo(level) {
     if (!ensure()) return;
     try {
       const base = 540 + Math.min(level, 24) * 26;
       tone(base, 0.12, { type: "square", gain: 0.18, glideTo: base * 1.5 });
+    } catch (_) {}
+  },
+
+  /** A cool little 3-note sparkle for a streak-bonus milestone. */
+  streakBonus(milestone) {
+    if (!ensure()) return;
+    try {
+      const root = 523 + Math.min(milestone, 8) * 40;
+      tone(root, 0.10, { type: "triangle", gain: 0.26 });
+      tone(root * 1.26, 0.10, { type: "triangle", gain: 0.24, when: 0.07 });
+      tone(root * 1.5, 0.16, { type: "triangle", gain: 0.26, when: 0.14 });
+      noise(0.08, { gain: 0.10, type: "bandpass", freq: 5000, when: 0.14 });
     } catch (_) {}
   },
 

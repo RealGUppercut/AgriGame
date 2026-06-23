@@ -107,9 +107,11 @@ class InstancedPool {
 }
 
 export class Particles {
-  constructor(sceneMgr, assets) {
+  constructor(sceneMgr, assets, layer = 1) {
     this.chunks = new InstancedPool(assets.geo.chunk, assets.mat.chunk, POOL.chunks);
     this.sparkles = new InstancedPool(assets.geo.sparkle, assets.mat.sparkle, POOL.sparkles);
+    this.chunks.mesh.layers.set(layer);
+    this.sparkles.mesh.layers.set(layer);
     sceneMgr.add(this.chunks.mesh);
     sceneMgr.add(this.sparkles.mesh);
   }

@@ -2,8 +2,9 @@
  * CROP VISION — bootstrap.
  *   1. Show the loading screen.
  *   2. Generate ALL assets + build the scene (no network needed at runtime).
- *   3. Try to load the display font (falls back to a system font on timeout).
- *   4. Wire input / sound / visibility, then run the loop at a steady cadence.
+ *   3. Build two player rigs (player 2 is only shown in Crop Battle).
+ *   4. Try to load the display font (falls back to a system font on timeout).
+ *   5. Wire input / sound / visibility, then run the loop at a steady cadence.
  * ========================================================================== */
 
 import { Assets } from "./assets.js";
@@ -53,30 +54,37 @@ async function boot() {
   await nextFrame();
 
   const world = new World(sceneMgr, assets);
-  world.attachCab(sceneMgr.camera);
-  sceneMgr.onResize((w, h, aspect) => world.layoutCab(aspect));
+  sceneMgr.onResize(() => world.layoutRigs());
   hud.setLoading(0.72, "Planting the field…");
   await nextFrame();
 
-  const items = new Items(sceneMgr, assets);
-  const particles = new Particles(sceneMgr, assets);
-  const floaters = new Floaters(
-    document.getElementById("floaters-layer"),
-    () => sceneMgr.camera
-  );
-  hud.setLoading(0.88, "Calibrating the crop camera…");
+  // Two player rigs. Player 1 = render layer 1, Player 2 = layer 2.
+  const mkPlayer = (index, layer, floatersId, getCam) => ({
+    index,
+    items: new Items(sceneMgr, assets, layer),
+    particles: new Particles(sceneMgr, assets, layer),
+    floaters: new Floaters(document.getElementById(floatersId), getCam),
+    score: 0, streak: 0, bestStreak: 0,
+  });
+  const player0 = mkPlayer(0, 1, "p1-floaters", () => sceneMgr.camera);
+  const player1 = mkPlayer(1, 2, "p2-floaters", () => sceneMgr.camera2);
+  hud.setLoading(0.9, "Calibrating the crop camera…");
 
   await loadFont();
-  sceneMgr.resize(); // apply cab layout / sizing once everything exists
 
-  const game = new Game({ sceneMgr, world, items, particles, floaters, hud, audio, storage });
-
-  // ---- Input ----
-  initInput({
-    onHarvest: () => game.action("harvest"),
-    onRemove: () => game.action("remove"),
-    onStart: () => game.start(),
+  let game;
+  const inputCtl = initInput({
+    onAction: (p, k) => game.action(p, k),
+    onStart: () => game.advance(),
+    onEscape: () => game.goHome(),
+    onSelectMode: (m) => game.selectMode(m),
+    onHome: () => game.goHome(),
     onAnyInput: () => game.noteInput(),
+  });
+
+  game = new Game({
+    sceneMgr, world, hud, audio, storage,
+    input: inputCtl, players: [player0, player1],
   });
 
   // ---- Sound toggle (muted by default) ----
@@ -86,20 +94,16 @@ async function boot() {
     soundBtn.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       game.noteInput();
-      const muted = audio.toggle();
-      hud.setSoundLabel(muted);
+      hud.setSoundLabel(audio.toggle());
     });
   }
 
-  // ---- Results-screen name / organisation entry (saves live as they type) ----
+  // ---- Solo results name / organisation entry (saves live as they type) ----
   const nameInput = document.getElementById("name-input");
   const orgInput = document.getElementById("org-input");
   const onNameInput = () => {
     game.noteInput();
-    game.updatePending(
-      nameInput ? nameInput.value : "",
-      orgInput ? orgInput.value : ""
-    );
+    game.updatePending(nameInput ? nameInput.value : "", orgInput ? orgInput.value : "");
   };
   if (nameInput) nameInput.addEventListener("input", onNameInput);
   if (orgInput) orgInput.addEventListener("input", onNameInput);
@@ -110,13 +114,14 @@ async function boot() {
 
   // ---- Pause on tab hidden, resume cleanly ----
   let paused = false;
+  let last = now();
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
       paused = true;
     } else {
       paused = false;
-      last = now();          // avoid a giant dt jump
-      game.noteInput();      // don't instantly idle-reset on return
+      last = now();
+      game.noteInput();
       audio.resume();
     }
   });
@@ -126,13 +131,12 @@ async function boot() {
   game.enterAttract();
 
   // ---- Main loop ----
-  let last = now();
   function frame() {
     requestAnimationFrame(frame);
     const t = now();
     let dt = (t - last) / 1000;
     last = t;
-    dt = clamp(dt, 0, 0.05); // clamp after alt-tab / stalls
+    dt = clamp(dt, 0, 0.05);
     if (!paused) {
       try { game.update(dt); } catch (err) { console.error(err); }
     }

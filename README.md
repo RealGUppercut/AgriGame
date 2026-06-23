@@ -66,19 +66,40 @@ node tools/build-offline.mjs
 
 ---
 
-## 2. Controls
+## 2. Game flow & modes
 
-| Action      | Keyboard            | Touch / pointer            |
-|-------------|---------------------|----------------------------|
-| **Harvest** (carrots) | **← Left Arrow** or **A** | Big green **HARVEST** button (left)  |
-| **Remove** (weeds)    | **→ Right Arrow** or **L**| Big red **REMOVE** button (right)    |
-| Start / Play Again    | **Space**, **Enter**, or any key | Tap the screen / button      |
+**Welcome screen** (today's top-5 leaderboard + **START**) → **Choose your game**
+(**SOLO** or **CROP BATTLE!**) → 60-second round → results. The kiosk auto-returns
+to the welcome screen after ~20s idle, and **Esc** quits any game back there.
 
-On-screen buttons are large and thumb-positioned for landscape, sized for a child's
-finger. The action mappings are shown on the title screen and beside each button.
+- **Solo** — the single-player game.
+- **Crop Battle!** — split-screen, two players, **the same carrot/weed spawns**
+  for both. Each side has its own score, its own cab (the two cabs bob
+  differently so each player feels they're in their own vehicle), and its own
+  feedback. Highest score after 60s wins.
 
-Carrot = **orange, smooth, leafy top** → Harvest.
-Weed = **bushy, spiky, dark green with magenta buds** → Remove.
+### Controls
+
+| Action | Solo | Crop Battle |
+|---|---|---|
+| **Harvest** (carrots) | **← / A** or green button | P1 **A** · P2 **←** |
+| **Remove** (weeds) | **→ / L** or red button | P1 **D** · P2 **→** |
+| Start / advance menus | Space / Enter / any key / tap | same; or **1** = Solo, **2** = Battle |
+| Quit to welcome | **Esc** | **Esc** |
+
+On-screen buttons are large and thumb-positioned for landscape. Carrot =
+**orange, smooth, leafy top** → Harvest. Weed = **bushy, spiky, dark green with
+magenta buds** → Remove.
+
+### Two keyboards for Crop Battle (your USB-hub question)
+
+Yes — plug both in. **Caveat:** macOS merges all keyboards into one input stream,
+and a browser can't tell which physical keyboard a key came from. So the two
+players use **different keys** (P1 `A`/`D`, P2 `←`/`→`); both keyboards type
+everything, but each player only ever presses their own keys, so two keyboards
+work perfectly. (True per-device separation would need the experimental WebHID
+API — Chrome-only, permission-gated and flaky for keyboards — so it's not used.)
+Change the key sets in `TUNE.battle.keysP1` / `keysP2` in `src/config.js`.
 
 ---
 
@@ -96,10 +117,13 @@ Weed = **bushy, spiky, dark green with magenta buds** → Remove.
 | **Difficulty ramp — density** | `difficulty.gapStart` → `difficulty.gapEnd` (smaller = more items) |
 | **Ramp shape** | `difficulty.rampCurve` (0 = linear, higher = stays easy longer then ramps) |
 | **Timing-window generosity** | `zone.halfDepth` — **the main "make it easier" knob** (bigger = longer window) |
-| **Points per hit** | `scoring.basePoints` |
-| **Miss harshness** | `scoring.missPenalty` (kept at **0** — combo just resets) |
-| **Combo → multiplier rate** | `scoring.comboPerMult` (every N in a row = +1×), `scoring.maxMultiplier` |
+| **Points per hit** | `scoring.basePoints` (flat — there is **no** runaway multiplier) |
+| **Miss harshness** | `scoring.missPenalty` (kept at **0** — the streak just resets) |
+| **Streak bonus size** | `scoring.streakBonusEvery` (bonus every N in a row), `streakBonusStep`, `streakBonusMax` — keep these small so leads stay catchable |
+| **Streak puns** | `STREAK_PUNS` array in `src/config.js` |
 | **Crop / weed mix** | `spawn.weedChance` (0–1) |
+| **Battle keys** | `battle.keysP1` / `battle.keysP2` |
+| **Battle cab feel** | `battle.bobPhaseOffset`, `bobAmpScale`, `bobHzScale` |
 
 **Quick recipes**
 - *"Too hard for little ones"* → raise `zone.halfDepth` (e.g. 5.2 → 7) and/or lower
@@ -131,7 +155,7 @@ size in `src/scene.js`.
   - *Field* = a plane with a procedurally-generated soil texture (furrows + tilled
     speckle) that scrolls toward you; parallax instanced grass, fences, trees and
     distant hills sell the forward motion.
-- **Game feel:** easing on all motion, camera bob/shake that grows with combo,
+- **Game feel:** easing on all motion, camera bob/shake that grows with the streak,
   particle bursts (soil/leaf debris + glowing sparkles), floating "+points",
   success/miss flashes, and a big high-contrast HUD readable from across the stand.
 
@@ -141,7 +165,7 @@ size in `src/scene.js`.
 
 - Pooled & instanced everything (items, particles, scenery, floating numbers) and
   shared geometries/materials → **stable memory and 60fps over a full show day**.
-- Survives: button-mashing (can't cheese a combo), window resize, alt-tab (pauses
+- Survives: button-mashing (can't cheese a streak), window resize, alt-tab (pauses
   on tab-hide, resumes cleanly), **WebGL context loss/restore**, long idling, and
   rapid restarts — no crashes, no state leaking between rounds.
 - `localStorage` for "Today's Top Scores" (top 5, auto-resets each day) with an
@@ -168,7 +192,7 @@ src/
   items.js              # pooled carrots/weeds, streaming + zone hit-testing
   particles.js          # pooled instanced debris + sparkle bursts
   floaters.js           # pooled "+points" numbers (3D→2D projected)
-  hud.js                # score/combo/timer, screens, ratings, top-scores table
+  hud.js                # score/streak/timer, screens, ratings, top-scores table
   input.js              # keyboard + touch mapping
   audio.js              # synthesized SFX (muted by default)
   storage.js            # safe localStorage high-scores
@@ -181,7 +205,7 @@ test/sim.mjs            # headless logic tests (node test/sim.mjs)
 
 ### Tests
 
-`node test/sim.mjs` drives the real game state machine, scoring, combo, pooling and
+`node test/sim.mjs` drives the real game state machine, scoring, streak, pooling and
 zone logic headlessly (no GPU needed) and asserts they behave. The 3D/WebGL visuals
 must be eye-checked in a browser.
 

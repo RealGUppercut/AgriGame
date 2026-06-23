@@ -38,7 +38,9 @@ export class Floaters {
     if (!cam) return;
     _v.set(worldPos.x, worldPos.y, worldPos.z).project(cam);
     if (_v.z > 1) return; // behind the camera
-    const w = window.innerWidth, h = window.innerHeight;
+    // Map NDC into the container's own box, so battle halves stay in their half.
+    const w = this.layer.clientWidth || window.innerWidth;
+    const h = this.layer.clientHeight || window.innerHeight;
     const x = (_v.x * 0.5 + 0.5) * w;
     const y = (-_v.y * 0.5 + 0.5) * h;
 

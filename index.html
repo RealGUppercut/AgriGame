@@ -10,7 +10,7 @@
   <!--
     Three.js is VENDORED LOCALLY in /vendor (no CDN / no internet needed at runtime).
     The import map below points the bare "three" / "three/addons/" specifiers at those
-    local files. If you ever want to switch back to a CDN, replace the two URLs below.
+    local files. To switch to a CDN, replace the two URLs below.
   -->
   <script type="importmap">
   {
@@ -21,76 +21,97 @@
   }
   </script>
 </head>
-<body>
-  <!-- 3D viewport -->
+<body class="mode-solo">
   <canvas id="scene-canvas"></canvas>
 
-  <!-- All 2D UI lives above the canvas -->
   <div id="ui-root">
-
-    <!-- Screen-space colour flashes & vignette (success / miss feedback) -->
-    <div id="flash-overlay"></div>
-    <div id="vignette"></div>
-
-    <!-- Floating "+points" numbers are injected here -->
-    <div id="floaters-layer"></div>
 
     <!-- ===================== IN-GAME HUD ===================== -->
     <div id="hud" class="screen-layer hidden">
-      <div id="hud-top">
-        <div id="score-box">
-          <div class="hud-label">SCORE</div>
-          <div id="score-value">0</div>
-        </div>
-        <div id="timer-wrap">
-          <div id="timer-bar"><div id="timer-fill"></div></div>
-        </div>
-        <div id="combo-box" class="hidden">
-          <div id="combo-mult">x1</div>
-          <div id="combo-count">0 combo</div>
-        </div>
+      <!-- Per-player feedback flashes (full screen in solo, per half in battle) -->
+      <div id="p1-flash" class="pflash"></div>
+      <div id="p2-flash" class="pflash"></div>
+
+      <div id="timer-wrap"><div id="timer-bar"><div id="timer-fill"></div></div></div>
+
+      <!-- Player 1 -->
+      <div id="p1-hud" class="player-hud">
+        <div class="hud-label">SCORE</div>
+        <div id="p1-score" class="ph-score">0</div>
+        <div id="p1-streak" class="ph-streak hidden"><span id="p1-streak-val">0</span> streak</div>
       </div>
+      <!-- Player 2 (battle only) -->
+      <div id="p2-hud" class="player-hud right">
+        <div class="hud-label">SCORE</div>
+        <div id="p2-score" class="ph-score">0</div>
+        <div id="p2-streak" class="ph-streak hidden"><span id="p2-streak-val">0</span> streak</div>
+      </div>
+
+      <!-- Streak-bonus toasts -->
+      <div id="p1-toast" class="streak-toast"></div>
+      <div id="p2-toast" class="streak-toast"></div>
+
+      <!-- Per-player floating "+points" layers -->
+      <div id="p1-floaters" class="floaters"></div>
+      <div id="p2-floaters" class="floaters"></div>
 
       <!-- Touch / pointer controls -->
-      <div id="touch-controls">
-        <button id="btn-harvest" class="action-btn harvest" type="button" aria-label="Harvest the carrot">
-          <span class="btn-title">HARVEST</span>
-          <span class="btn-key">&#9664; / A</span>
+      <div id="p1-controls" class="touch-controls">
+        <button id="p1-harvest" class="action-btn harvest" type="button" aria-label="Harvest">
+          <span class="btn-title">HARVEST</span><span class="btn-key">&#9664; / A</span>
         </button>
-        <button id="btn-remove" class="action-btn remove" type="button" aria-label="Remove the weed">
-          <span class="btn-title">REMOVE</span>
-          <span class="btn-key">&#9654; / L</span>
+        <button id="p1-remove" class="action-btn remove" type="button" aria-label="Remove">
+          <span class="btn-title">REMOVE</span><span class="btn-key">&#9654; / L</span>
         </button>
       </div>
+      <div id="p2-controls" class="touch-controls right">
+        <button id="p2-harvest" class="action-btn harvest" type="button" aria-label="Player 2 harvest">
+          <span class="btn-title">HARVEST</span><span class="btn-key">&#9664;</span>
+        </button>
+        <button id="p2-remove" class="action-btn remove" type="button" aria-label="Player 2 remove">
+          <span class="btn-title">REMOVE</span><span class="btn-key">&#9654;</span>
+        </button>
+      </div>
+
+      <div id="esc-hint">Esc&nbsp;= quit</div>
     </div>
 
-    <!-- ===================== ATTRACT / TITLE ===================== -->
+    <!-- ===================== ATTRACT / WELCOME ===================== -->
     <div id="attract-screen" class="screen-layer hidden">
       <div class="panel attract-panel">
         <h1 class="game-title">CROP<span class="title-accent">VISION</span></h1>
         <p class="tagline">Real harvesters use AI cameras to tell crops from weeds in a split second&nbsp;&mdash; now it&rsquo;s your turn.</p>
-
-        <div class="legend">
-          <div class="legend-item">
-            <span class="legend-swatch carrot-swatch"></span>
-            <div><b>HARVEST</b> the carrots<br><span class="legend-keys">&#9664; Left&nbsp;&middot;&nbsp;A</span></div>
-          </div>
-          <div class="legend-item">
-            <span class="legend-swatch weed-swatch"></span>
-            <div><b>REMOVE</b> the weeds<br><span class="legend-keys">&#9654; Right&nbsp;&middot;&nbsp;L</span></div>
-          </div>
-        </div>
-
-        <div id="attract-scores" class="topscores"></div>
-
+        <div id="attract-scores" class="topscores big-board"></div>
         <button id="btn-start" class="big-cta" type="button">
-          <span class="cta-main">TAP&nbsp;/&nbsp;PRESS TO START</span>
-          <span class="cta-sub">60-second harvest run</span>
+          <span class="cta-main">START</span>
+          <span class="cta-sub">Tap / Press any key</span>
         </button>
       </div>
     </div>
 
-    <!-- ===================== RESULTS ===================== -->
+    <!-- ===================== MODE SELECT ===================== -->
+    <div id="mode-screen" class="screen-layer hidden">
+      <div class="panel mode-panel">
+        <h2 class="mode-heading">Choose your game</h2>
+        <div class="mode-cards">
+          <button id="btn-solo" class="mode-card" type="button">
+            <span class="mc-icon solo-icon"></span>
+            <span class="mc-title">SOLO</span>
+            <span class="mc-sub">1 player &middot; 60-second run</span>
+            <span class="mc-keys">Harvest &#9664;/A &nbsp;&middot;&nbsp; Remove &#9654;/L</span>
+          </button>
+          <button id="btn-battle" class="mode-card battle" type="button">
+            <span class="mc-icon battle-icon"></span>
+            <span class="mc-title">CROP BATTLE!</span>
+            <span class="mc-sub">2 players &middot; split-screen head-to-head</span>
+            <span class="mc-keys">P1: A / D &nbsp;&middot;&nbsp; P2: &#9664; / &#9654;</span>
+          </button>
+        </div>
+        <button id="btn-mode-back" class="text-btn" type="button">&#8592; Back</button>
+      </div>
+    </div>
+
+    <!-- ===================== SOLO RESULTS ===================== -->
     <div id="results-screen" class="screen-layer hidden">
       <div class="panel results-panel">
         <div id="results-rating" class="rating">Master Harvester!</div>
@@ -100,7 +121,7 @@
             <div id="results-score" class="big-num">0</div>
           </div>
           <div class="result-stat">
-            <div class="hud-label">BEST COMBO</div>
+            <div class="hud-label">BEST STREAK</div>
             <div id="results-combo" class="big-num">0</div>
           </div>
         </div>
@@ -127,10 +148,40 @@
           <div id="dyk-text">&nbsp;</div>
         </div>
 
-        <button id="btn-again" class="big-cta" type="button">
-          <span class="cta-main">PLAY AGAIN</span>
-          <span class="cta-sub">Tap / Press any key</span>
-        </button>
+        <div class="result-buttons">
+          <button id="btn-again" class="big-cta" type="button">
+            <span class="cta-main">PLAY AGAIN</span>
+            <span class="cta-sub">Tap / Press any key</span>
+          </button>
+          <button id="btn-results-menu" class="text-btn" type="button">Main menu</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== BATTLE RESULTS ===================== -->
+    <div id="battle-results" class="screen-layer hidden">
+      <div class="panel results-panel">
+        <div id="br-headline" class="rating">PLAYER 1 WINS!</div>
+        <div class="battle-grid">
+          <div class="battle-col" id="br-col1">
+            <div class="bc-title">PLAYER 1</div>
+            <div id="br-p1-score" class="big-num">0</div>
+            <div class="bc-streak">best streak <span id="br-p1-streak">0</span></div>
+          </div>
+          <div class="vs">VS</div>
+          <div class="battle-col" id="br-col2">
+            <div class="bc-title">PLAYER 2</div>
+            <div id="br-p2-score" class="big-num">0</div>
+            <div class="bc-streak">best streak <span id="br-p2-streak">0</span></div>
+          </div>
+        </div>
+        <div class="result-buttons">
+          <button id="btn-rematch" class="big-cta" type="button">
+            <span class="cta-main">REMATCH</span>
+            <span class="cta-sub">Tap / Press any key</span>
+          </button>
+          <button id="btn-battle-menu" class="text-btn" type="button">Main menu</button>
+        </div>
       </div>
     </div>
 
@@ -149,7 +200,7 @@
       <span id="sound-label">SOUND&nbsp;OFF</span>
     </button>
 
-    <!-- Fatal-error fallback (should never appear) -->
+    <!-- Fatal-error fallback -->
     <div id="error-screen" class="screen-layer hidden">
       <div class="panel">
         <h2>Hmm, something went wrong.</h2>

@@ -579,3 +579,226 @@ body.show-sound #sound-toggle { display: inline-flex; }
   font-size: clamp(16px, 4vw, 24px);
   font-weight: 600;
 }
+
+/* ==========================================================================
+   v2 — two-player HUD, mode select, battle results, streak toasts
+   ========================================================================== */
+
+#hud { pointer-events: none; }
+
+/* ---- Shared timer (top centre) ------------------------------------------ */
+#timer-wrap {
+  position: absolute;
+  top: clamp(10px, 2.4vh, 20px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(46vw, 380px);
+  z-index: 12;
+}
+
+/* ---- Per-player score / streak ------------------------------------------ */
+.player-hud {
+  position: absolute;
+  top: clamp(8px, 2vh, 18px);
+  z-index: 12;
+  pointer-events: none;
+}
+#p1-hud { left: clamp(12px, 3vw, 30px); text-align: left; }
+#p2-hud { right: clamp(12px, 3vw, 30px); text-align: right; }
+.ph-score {
+  font-size: clamp(30px, 6vw, 60px);
+  font-weight: 700;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 3px 0 rgba(0,0,0,0.35), 0 6px 18px rgba(0,0,0,0.5);
+}
+.ph-score.bump { animation: score-bump 0.25s ease; }
+.ph-streak {
+  margin-top: 2px;
+  font-size: clamp(13px, 2vw, 18px);
+  font-weight: 600;
+  color: var(--gold);
+  text-shadow: 0 0 14px rgba(255,201,77,0.7), 0 2px 4px rgba(0,0,0,0.6);
+  transition: opacity 0.2s ease;
+}
+.ph-streak.hidden { opacity: 0; }
+.ph-streak span { font-size: 1.35em; font-weight: 700; }
+.ph-streak.pop { animation: combo-pop 0.3s cubic-bezier(0.2,1.6,0.4,1); }
+
+/* ---- Streak-bonus toasts (small, brief, encouraging) -------------------- */
+.streak-toast {
+  position: absolute;
+  top: clamp(74px, 13vh, 120px);
+  z-index: 13;
+  pointer-events: none;
+  opacity: 0;
+  font-weight: 700;
+  font-size: clamp(15px, 2.4vw, 22px);
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 0 16px rgba(120,255,140,0.8);
+  white-space: nowrap;
+}
+#p1-toast { left: clamp(12px, 3vw, 30px); text-align: left; }
+#p2-toast { right: clamp(12px, 3vw, 30px); text-align: right; }
+.streak-toast .st-pts { color: var(--gold); }
+.streak-toast.show { animation: toast-pop 1.15s ease-out; }
+@keyframes toast-pop {
+  0%   { opacity: 0; transform: translateY(8px) scale(0.8); }
+  18%  { opacity: 1; transform: translateY(0) scale(1.05); }
+  70%  { opacity: 1; transform: translateY(-4px) scale(1); }
+  100% { opacity: 0; transform: translateY(-16px) scale(1); }
+}
+
+/* ---- Floating "+points" layers (per player / per viewport) -------------- */
+.floaters { position: absolute; top: 0; bottom: 0; pointer-events: none; z-index: 11; }
+
+/* ---- Per-player feedback flash ------------------------------------------ */
+.pflash { position: absolute; top: 0; bottom: 0; pointer-events: none; opacity: 0; z-index: 10; }
+.pflash.good {
+  mix-blend-mode: screen;
+  background: radial-gradient(circle at center, rgba(180,255,150,0.5), rgba(180,255,150,0) 62%);
+  animation: flash-fade 0.4s ease;
+}
+.pflash.bad {
+  background: radial-gradient(circle at center, rgba(255,70,40,0) 38%, rgba(200,30,10,0.45) 100%);
+  animation: flash-fade 0.55s ease;
+}
+body.mode-solo #p2-flash { display: none; }
+body.mode-solo #p1-flash { left: 0; right: 0; }
+body.mode-battle #p1-flash { left: 0; width: 50%; }
+body.mode-battle #p2-flash { left: 50%; width: 50%; }
+
+/* ---- Touch controls (per side) ------------------------------------------ */
+.touch-controls {
+  position: absolute;
+  bottom: 0;
+  display: flex;
+  gap: clamp(10px, 3vw, 28px);
+  padding: clamp(12px, 4vh, 36px) clamp(14px, 4vw, 48px);
+}
+#esc-hint {
+  position: absolute;
+  bottom: clamp(6px, 1.4vh, 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  font-size: clamp(10px, 1.4vw, 13px);
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.55);
+  pointer-events: none;
+}
+
+/* Solo: P1 spans the whole bottom; hide P2 elements */
+body.mode-solo #p2-hud,
+body.mode-solo #p2-controls,
+body.mode-solo #p2-floaters,
+body.mode-solo #p2-toast { display: none; }
+body.mode-solo #p1-floaters { left: 0; right: 0; }
+body.mode-solo #p1-controls { left: 0; right: 0; justify-content: space-between; }
+
+/* Battle: split halves */
+body.mode-battle #p1-floaters { left: 0; width: 50%; }
+body.mode-battle #p2-floaters { left: 50%; width: 50%; }
+body.mode-battle #p1-controls { left: 0; width: 50%; justify-content: space-evenly; }
+body.mode-battle #p2-controls { right: 0; width: 50%; justify-content: space-evenly; }
+body.mode-battle .action-btn { width: clamp(86px, 17vw, 170px); height: clamp(84px, 15vh, 150px); }
+body.mode-battle #hud::after { /* centre divider */
+  content: "";
+  position: absolute;
+  left: 50%; top: 0; bottom: 0;
+  width: 4px;
+  transform: translateX(-2px);
+  background: linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.55));
+  z-index: 14;
+}
+body.mode-battle #p1-hud .hud-label::after { content: " \2014 P1"; opacity: 0.7; }
+body.mode-battle #p2-hud .hud-label::after { content: " \2014 P2"; opacity: 0.7; }
+
+/* ---- Mode select --------------------------------------------------------- */
+.mode-heading {
+  font-size: clamp(26px, 5vw, 44px);
+  font-weight: 700;
+  margin: 0 0 18px;
+  color: var(--cream);
+}
+.mode-cards {
+  display: flex;
+  gap: clamp(14px, 3vw, 28px);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.mode-card {
+  pointer-events: auto;
+  flex: 1 1 240px;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: clamp(18px, 3vh, 30px) clamp(16px, 3vw, 28px);
+  border: 3px solid rgba(255,255,255,0.18);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(67,177,74,0.22), rgba(38,60,86,0.5));
+  color: var(--cream);
+  font-family: var(--font);
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+}
+.mode-card.battle { background: linear-gradient(180deg, rgba(226,79,59,0.24), rgba(38,60,86,0.5)); }
+.mode-card:active { transform: translateY(3px); }
+.mode-card:hover { border-color: var(--gold); }
+.mc-title { font-size: clamp(24px, 4vw, 38px); font-weight: 700; letter-spacing: 1px; }
+.mc-sub { font-size: clamp(13px, 2vw, 17px); font-weight: 600; opacity: 0.9; }
+.mc-keys { font-size: clamp(11px, 1.7vw, 14px); font-weight: 600; color: #ffd98a; }
+.mc-icon { width: 56px; height: 56px; border-radius: 14px; margin-bottom: 4px; }
+.solo-icon { background: var(--carrot); border-bottom: 8px solid var(--carrot-top); }
+.battle-icon {
+  background: linear-gradient(90deg, var(--carrot) 0 50%, var(--weed) 50% 100%);
+  border-bottom: 8px solid var(--weed-flower);
+}
+.text-btn {
+  pointer-events: auto;
+  background: none;
+  border: none;
+  color: #ffe9c4;
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: clamp(13px, 2vw, 16px);
+  opacity: 0.8;
+  cursor: pointer;
+  padding: 8px 14px;
+}
+.text-btn:hover { opacity: 1; text-decoration: underline; }
+
+/* ---- Welcome leaderboard (prominent, all 5 visible) --------------------- */
+.big-board { max-width: 30em; font-size: clamp(15px, 2.3vw, 20px); margin: 8px auto 6px; }
+.big-board .ts-title { font-size: 1.05em; margin-bottom: 8px; }
+.big-board .ts-row { padding: 5px 12px; }
+
+/* ---- Battle results ------------------------------------------------------ */
+.battle-grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(12px, 4vw, 40px);
+  margin: 10px 0 16px;
+}
+.battle-col {
+  flex: 1 1 0;
+  max-width: 240px;
+  padding: 14px 12px;
+  border-radius: 18px;
+  border: 3px solid transparent;
+  background: rgba(0,0,0,0.2);
+}
+.battle-col.winner {
+  border-color: var(--gold);
+  background: rgba(255,201,77,0.18);
+  box-shadow: 0 0 24px rgba(255,201,77,0.4);
+}
+.bc-title { font-weight: 700; color: #ffe9c4; letter-spacing: 1px; margin-bottom: 4px; }
+.bc-streak { font-size: clamp(12px, 1.8vw, 15px); opacity: 0.75; margin-top: 2px; }
+.vs { font-size: clamp(20px, 3vw, 30px); font-weight: 700; color: var(--gold); }
+.result-buttons { display: flex; flex-direction: column; align-items: center; gap: 4px; }

@@ -1,86 +1,106 @@
 /* ============================================================================
- * HUD — the large, high-contrast 2D overlay and all screen transitions.
- * Score / combo / timer, success & miss feedback, results, top-scores table.
+ * HUD — the 2D overlay, screen transitions and per-player feedback.
+ * Supports Solo (one player) and Crop Battle (two players, split screen).
  * ========================================================================== */
 
 import { RATINGS, FACTS } from "./config.js";
 import { fmt } from "./utils.js";
 
 const $ = (id) => document.getElementById(id);
-function restart(el) { el.style.animation = "none"; void el.offsetWidth; el.style.animation = ""; }
+function restart(el) { if (!el) return; el.style.animation = "none"; void el.offsetWidth; el.style.animation = ""; }
 
 export class HUD {
   constructor() {
     this.screens = {
       loading: $("loading-screen"),
       attract: $("attract-screen"),
-      results: $("results-screen"),
+      mode: $("mode-screen"),
       hud: $("hud"),
+      results: $("results-screen"),
+      battleResults: $("battle-results"),
       error: $("error-screen"),
     };
-    this.scoreEl = $("score-value");
-    this.comboBox = $("combo-box");
-    this.comboMult = $("combo-mult");
-    this.comboCount = $("combo-count");
+
+    // Per-player elements (index 0 = P1, 1 = P2)
+    this.score = [$("p1-score"), $("p2-score")];
+    this.streakBox = [$("p1-streak"), $("p2-streak")];
+    this.streakVal = [$("p1-streak-val"), $("p2-streak-val")];
+    this.toast = [$("p1-toast"), $("p2-toast")];
+    this.flash = [$("p1-flash"), $("p2-flash")];
+    this.btnHarvest = [$("p1-harvest"), $("p2-harvest")];
+    this.btnRemove = [$("p1-remove"), $("p2-remove")];
+    this._lastStreak = [0, 0];
+
     this.timerFill = $("timer-fill");
-    this.flash = $("flash-overlay");
-    this.vignette = $("vignette");
-    this.btnHarvest = $("btn-harvest");
-    this.btnRemove = $("btn-remove");
     this.soundLabel = $("sound-label");
     this.soundToggle = $("sound-toggle");
     this.nameEntry = $("name-entry");
     this.nameInput = $("name-input");
     this.orgInput = $("org-input");
 
-    this._lastMult = 1;
     document.body.classList.add("show-sound");
 
-    // Countdown overlay (created dynamically to keep index.html tidy)
     this.countdownEl = document.createElement("div");
     this.countdownEl.id = "countdown";
     this.countdownEl.className = "hidden";
-    document.getElementById("ui-root").appendChild(this.countdownEl);
+    $("ui-root").appendChild(this.countdownEl);
   }
 
-  showCountdown(text) {
-    this.countdownEl.textContent = text;
-    this.countdownEl.classList.remove("hidden");
-    restart(this.countdownEl);
-  }
-  hideCountdown() { this.countdownEl.classList.add("hidden"); }
-
+  /* ---- Screens ---- */
   showScreen(name) {
     for (const key in this.screens) {
       const el = this.screens[key];
-      if (!el) continue;
-      el.classList.toggle("hidden", key !== name);
+      if (el) el.classList.toggle("hidden", key !== name);
     }
+  }
+
+  showCountdown(text) { this.countdownEl.textContent = text; this.countdownEl.classList.remove("hidden"); restart(this.countdownEl); }
+  hideCountdown() { this.countdownEl.classList.add("hidden"); }
+
+  /* ---- Mode (solo / battle) ---- */
+  setMode(mode) {
+    document.body.classList.toggle("mode-battle", mode === "battle");
+    document.body.classList.toggle("mode-solo", mode !== "battle");
+    const keys = (b, k) => { const s = b && b.querySelector(".btn-key"); if (s) s.innerHTML = k; };
+    if (mode === "battle") {
+      keys(this.btnHarvest[0], "A"); keys(this.btnRemove[0], "D");
+      keys(this.btnHarvest[1], "&#9664;"); keys(this.btnRemove[1], "&#9654;");
+    } else {
+      keys(this.btnHarvest[0], "&#9664; / A"); keys(this.btnRemove[0], "&#9654; / L");
+    }
+    for (let i = 0; i < 2; i++) { this.setScore(i, 0); this.resetStreak(i); }
   }
 
   /* ---- In-game ---- */
-  setScore(v) {
-    this.scoreEl.textContent = fmt(v);
-    restart(this.scoreEl);
-    this.scoreEl.classList.add("bump");
+  setScore(i, v) {
+    const el = this.score[i];
+    if (!el) return;
+    el.textContent = fmt(v);
+    el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump");
   }
 
-  setCombo(combo, mult) {
-    const show = combo >= 2;
-    this.comboBox.classList.toggle("hidden", !show);
-    if (!show) { this._lastMult = 1; return; }
-    this.comboMult.textContent = "x" + mult;
-    this.comboCount.textContent = combo + " streak";
-    if (mult > this._lastMult) {
-      restart(this.comboMult);
-      this.comboMult.classList.add("pop");
+  setStreak(i, streak) {
+    const box = this.streakBox[i];
+    if (!box) return;
+    const show = streak >= 2;
+    box.classList.toggle("hidden", !show);
+    if (show) {
+      this.streakVal[i].textContent = streak;
+      if (streak > this._lastStreak[i]) { box.classList.remove("pop"); void box.offsetWidth; box.classList.add("pop"); }
     }
-    this._lastMult = mult;
+    this._lastStreak[i] = streak;
   }
 
-  resetCombo() {
-    this.comboBox.classList.add("hidden");
-    this._lastMult = 1;
+  resetStreak(i) {
+    if (this.streakBox[i]) this.streakBox[i].classList.add("hidden");
+    this._lastStreak[i] = 0;
+  }
+
+  streakToast(i, pun, bonus) {
+    const el = this.toast[i];
+    if (!el) return;
+    el.innerHTML = `<span class="st-pts">+${bonus}</span> ${pun}`;
+    el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
   }
 
   setTimer(frac) {
@@ -89,81 +109,64 @@ export class HUD {
     this.timerFill.classList.toggle("low", frac < 0.25);
   }
 
-  flashGood() {
-    this.flash.className = "";
-    restart(this.flash);
-    this.flash.className = "good";
-  }
+  flashGood(i) { const el = this.flash[i]; if (!el) return; el.className = "pflash"; void el.offsetWidth; el.className = "pflash good"; }
+  flashBad(i) { const el = this.flash[i]; if (!el) return; el.className = "pflash"; void el.offsetWidth; el.className = "pflash bad"; }
 
-  flashBad() {
-    this.flash.className = "";
-    restart(this.flash);
-    this.flash.className = "bad";
-    this.vignette.style.boxShadow = "inset 0 0 200px 50px rgba(150,0,0,0.5)";
-    this.vignette.style.opacity = "1";
-    clearTimeout(this._vigT);
-    this._vigT = setTimeout(() => { this.vignette.style.opacity = "0"; }, 220);
-  }
-
-  buttonFeedback(action) {
-    const el = action === "harvest" ? this.btnHarvest : this.btnRemove;
+  buttonFeedback(i, kind) {
+    const el = (kind === "harvest" ? this.btnHarvest : this.btnRemove)[i];
     if (!el) return;
-    el.classList.remove("flash");
-    void el.offsetWidth;
-    el.classList.add("flash");
+    el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
   }
 
-  /* ---- Loading ---- */
+  /* ---- Loading / sound ---- */
   setLoading(frac, text) {
     const bar = $("loading-bar");
     if (bar) bar.style.width = Math.round(frac * 100) + "%";
     if (text) { const t = $("loading-text"); if (t) t.textContent = text; }
   }
-
-  /* ---- Sound ---- */
   setSoundLabel(muted) {
     this.soundLabel.innerHTML = muted ? "SOUND&nbsp;OFF" : "SOUND&nbsp;ON";
     this.soundToggle.classList.toggle("on", !muted);
   }
 
-  /* ---- Results ---- */
+  /* ---- Solo results ---- */
   ratingFor(score) {
     let label = RATINGS[0].label;
     for (const r of RATINGS) if (score >= r.min) label = r.label;
     return label;
   }
 
-  showResults({ score, bestCombo, isBest, scores, highlightTs, madeBoard }) {
+  showResults({ score, bestStreak, isBest, scores, highlightTs, madeBoard }) {
     $("results-rating").textContent = this.ratingFor(score);
     $("results-score").textContent = fmt(score);
-    $("results-combo").textContent = fmt(bestCombo);
+    $("results-combo").textContent = fmt(bestStreak);
     $("results-newbest").classList.toggle("hidden", !isBest);
     $("dyk-text").innerHTML = FACTS[(Math.random() * FACTS.length) | 0];
 
-    // Name entry only when the run made the visible board.
     if (this.nameEntry) this.nameEntry.classList.toggle("hidden", !madeBoard);
     if (this.nameInput) this.nameInput.value = "";
     if (this.orgInput) this.orgInput.value = "";
-
     this.renderTopScores($("results-scores"), scores, highlightTs);
-
-    if (madeBoard && this.nameInput) {
-      // gently focus so the on-screen keyboard is ready for name entry
-      setTimeout(() => { try { this.nameInput.focus(); } catch (_) {} }, 350);
-    }
+    if (madeBoard && this.nameInput) setTimeout(() => { try { this.nameInput.focus(); } catch (_) {} }, 350);
   }
 
-  refreshResultsBoard(scores, highlightTs) {
-    this.renderTopScores($("results-scores"), scores, highlightTs);
+  refreshResultsBoard(scores, highlightTs) { this.renderTopScores($("results-scores"), scores, highlightTs); }
+
+  /* ---- Battle results ---- */
+  showBattleResults({ p1, p2, winner }) {
+    $("br-p1-score").textContent = fmt(p1.score);
+    $("br-p2-score").textContent = fmt(p2.score);
+    $("br-p1-streak").textContent = fmt(p1.bestStreak);
+    $("br-p2-streak").textContent = fmt(p2.bestStreak);
+    const head = winner === 0 ? "PLAYER 1 WINS!" : winner === 1 ? "PLAYER 2 WINS!" : "IT'S A DRAW!";
+    $("br-headline").textContent = head;
+    $("br-col1").classList.toggle("winner", winner === 0);
+    $("br-col2").classList.toggle("winner", winner === 1);
   }
 
-  /* ---- Attract ---- */
-  showAttractScores(scores) {
-    this.renderTopScores($("attract-scores"), scores, null);
-  }
+  /* ---- Attract / boards ---- */
+  showAttractScores(scores) { this.renderTopScores($("attract-scores"), scores, null); }
 
-  // Builds the board with DOM nodes (textContent) so player names can never
-  // break layout or inject markup.
   renderTopScores(container, scores, highlightTs) {
     if (!container) return;
     container.textContent = "";
@@ -179,34 +182,22 @@ export class HUD {
       container.appendChild(e);
       return;
     }
-
     for (let i = 0; i < scores.length; i++) {
       const s = scores[i];
       const row = document.createElement("div");
       row.className = "ts-row" + (highlightTs && s.ts === highlightTs ? " you" : "");
-
       const rank = document.createElement("span");
-      rank.className = "ts-rank";
-      rank.textContent = (i + 1) + ".";
-
+      rank.className = "ts-rank"; rank.textContent = (i + 1) + ".";
       const name = document.createElement("span");
-      name.className = "ts-name";
-      name.textContent = s.name ? s.name : "—"; // em dash if unnamed
+      name.className = "ts-name"; name.textContent = s.name ? s.name : "—";
       if (s.org) {
         const org = document.createElement("span");
-        org.className = "ts-org";
-        org.textContent = s.org;
-        name.appendChild(document.createTextNode(" "));
-        name.appendChild(org);
+        org.className = "ts-org"; org.textContent = s.org;
+        name.appendChild(document.createTextNode(" ")); name.appendChild(org);
       }
-
       const sc = document.createElement("span");
-      sc.className = "ts-score";
-      sc.textContent = fmt(s.score);
-
-      row.appendChild(rank);
-      row.appendChild(name);
-      row.appendChild(sc);
+      sc.className = "ts-score"; sc.textContent = fmt(s.score);
+      row.append(rank, name, sc);
       container.appendChild(row);
     }
   }

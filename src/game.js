@@ -1,77 +1,125 @@
 /* ============================================================================
- * Game — the state machine and round logic that ties everything together.
- *   States: attract → countdown → playing → results → (back to attract)
- *   Handles scoring, the combo multiplier, the difficulty ramp, all juicy
- *   feedback, kiosk idle-reset and clean round restarts.
+ * Game — state machine + round logic for Solo and Crop Battle.
+ *
+ *   States: attract (welcome) → menu (mode select) → countdown → playing →
+ *           results (solo) / battleResults  →  back to attract.
+ *
+ *   Scoring is STREAK-ONLY: every correct action = flat basePoints; every Nth
+ *   correct-in-a-row awards a small, capped milestone bonus (sound + toast +
+ *   pun). A miss resets the streak. No runaway multiplier, so leads stay
+ *   catchable unless accuracy is very high.
+ *
+ *   Crop Battle: identical spawns for both players (decided once, spawned into
+ *   each), shared world speed (so the rows stay mirrored), independent scoring,
+ *   and each cab bobs differently. Esc quits to the welcome screen.
  * ========================================================================== */
 
-import { TUNE } from "./config.js";
+import { TUNE, STREAK_PUNS } from "./config.js";
 import { clamp, lerp, now } from "./utils.js";
 
 export class Game {
   constructor(deps) {
     this.scene = deps.sceneMgr;
     this.world = deps.world;
-    this.items = deps.items;
-    this.particles = deps.particles;
-    this.floaters = deps.floaters;
     this.hud = deps.hud;
     this.audio = deps.audio;
     this.storage = deps.storage;
-    this._now = deps.now || now; // injectable clock (real wall-clock by default)
+    this.input = deps.input;          // { setMode }
+    this.allPlayers = deps.players;   // [p0, p1] bundles {index, items, particles, floaters}
+    this._now = deps.now || now;
 
+    this.mode = "solo";
+    this.players = [this.allPlayers[0]];
     this.state = "attract";
-    this.score = 0;
-    this.combo = 0;
-    this.bestCombo = 0;
-    this.multiplier = 1;
     this.roundTime = 0;
     this.spawnTimer = 0;
     this.demoTimer = 0;
     this.countdownT = 0;
     this._goShown = false;
-    this.pendingTs = null; // results-screen entry being named
+    this.pendingTs = null;
     this.lastInput = this._now();
   }
 
   noteInput() { this.lastInput = this._now(); }
 
+  /* ---- Mode configuration ------------------------------------------------ */
+
+  _cameras(mode) {
+    return mode === "battle"
+      ? [this.scene.camera, this.scene.ensureCamera2()]
+      : [this.scene.camera];
+  }
+
+  _configureMode(mode) {
+    this.mode = mode;
+    const cams = this._cameras(mode);
+    this.scene.setMode(mode);
+    this.world.setRigs(cams);
+    this.input.setMode(mode);
+    this.hud.setMode(mode);
+    this.players = mode === "battle"
+      ? [this.allPlayers[0], this.allPlayers[1]]
+      : [this.allPlayers[0]];
+    // Shadows leak across split viewports (shared shadow map) → off in battle.
+    this.allPlayers[0].items.setShadow(mode !== "battle");
+    if (this.allPlayers[1]) this.allPlayers[1].items.setShadow(false);
+    this._clearField();
+    this.world.reset();
+  }
+
+  _clearField() {
+    for (const p of this.allPlayers) {
+      p.items.reset();
+      p.particles.reset();
+      p.floaters.reset();
+      p.score = 0; p.streak = 0; p.bestStreak = 0;
+    }
+  }
+
   /* ---- Screen entry points ----------------------------------------------- */
 
   enterAttract() {
+    this._configureMode("solo");
     this.state = "attract";
-    this._clearField();
-    this.world.reset();
-    this.hud.resetCombo();
-    this.hud.hideCountdown();
     this.hud.showAttractScores(this.storage.getTopScores());
     this.hud.showScreen("attract");
+    this.hud.hideCountdown();
     this.demoTimer = 0.6;
     this.noteInput();
   }
 
-  start() {
-    if (this.state !== "attract" && this.state !== "results") return;
-    // drop focus from any name field so gameplay keys aren't typed into it
-    if (typeof document !== "undefined" &&
-        document.activeElement && document.activeElement.blur) {
+  enterMenu() {
+    this.state = "menu";
+    this.hud.showScreen("mode");
+    this.noteInput();
+  }
+
+  /** Generic "advance / confirm" press (Start, Play Again, Rematch, taps). */
+  advance() {
+    if (this.state === "attract") this.enterMenu();
+    else if (this.state === "results" || this.state === "battleResults") this.startRound(this.mode);
+    // menu: ignore — the player must pick Solo or Crop Battle explicitly
+  }
+
+  selectMode(mode) {
+    if (this.state === "menu" || this.state === "attract") this.startRound(mode);
+  }
+
+  goHome() { this.enterAttract(); }
+
+  startRound(mode) {
+    if (typeof document !== "undefined" && document.activeElement && document.activeElement.blur) {
       document.activeElement.blur();
     }
     this.pendingTs = null;
+    this._configureMode(mode);
     this.audio.unlock();
     this.audio.start();
-    this._clearField();
-    this.world.reset();
-    this.score = 0;
-    this.combo = 0;
-    this.bestCombo = 0;
-    this.multiplier = 1;
-    this.roundTime = 0;
-    this.spawnTimer = 0;
-    this.world.setIntensity(0);
-    this.scene.setIntensity(0);
-    this.hud.setScore(0);
-    this.hud.resetCombo();
+
+    for (const p of this.players) {
+      this.hud.setScore(p.index, 0);
+      this.hud.resetStreak(p.index);
+    }
     this.hud.setTimer(1);
     this.hud.showScreen("hud");
 
@@ -90,210 +138,205 @@ export class Game {
   }
 
   endRound() {
+    if (this.mode === "battle") return this._endBattle();
+    this._endSolo();
+  }
+
+  _endSolo() {
     this.state = "results";
-    this.bestCombo = Math.max(this.bestCombo, this.combo);
-    this.world.setIntensity(0);
+    const p = this.players[0];
+    p.bestStreak = Math.max(p.bestStreak, p.streak);
+    this.world.setIntensity(0, 0);
     this.scene.setIntensity(0);
 
-    const res = this.storage.addScore(this.score, this.bestCombo, "", "");
+    const res = this.storage.addScore(p.score, p.bestStreak, "", "");
     this.pendingTs = res.rank > 0 ? res.ts : null;
     this.hud.showResults({
-      score: this.score,
-      bestCombo: this.bestCombo,
-      isBest: res.isBest,
-      scores: res.scores,
-      highlightTs: res.ts,
-      madeBoard: res.rank > 0,
-      rank: res.rank,
+      score: p.score, bestStreak: p.bestStreak, isBest: res.isBest,
+      scores: res.scores, highlightTs: res.ts, madeBoard: res.rank > 0,
     });
     this.hud.showScreen("results");
     this.audio.results();
-    this.items.reset();
+    p.items.reset();
     this.noteInput();
   }
 
-  /** Live-save the player's name/org as they type on the results screen. */
+  _endBattle() {
+    this.state = "battleResults";
+    const [a, b] = this.players;
+    a.bestStreak = Math.max(a.bestStreak, a.streak);
+    b.bestStreak = Math.max(b.bestStreak, b.streak);
+    const winner = a.score === b.score ? -1 : (a.score > b.score ? 0 : 1);
+    this.hud.showBattleResults({
+      p1: { score: a.score, bestStreak: a.bestStreak },
+      p2: { score: b.score, bestStreak: b.bestStreak },
+      winner,
+    });
+    this.hud.showScreen("battleResults");
+    this.audio.results();
+    a.items.reset(); b.items.reset();
+    this.noteInput();
+  }
+
+  /** Live-save the solo player's name/org as they type on the results screen. */
   updatePending(name, org) {
     if (!this.pendingTs) return;
     const scores = this.storage.updateScore(this.pendingTs, name, org);
     this.hud.refreshResultsBoard(scores, this.pendingTs);
   }
 
-  _clearField() {
-    this.items.reset();
-    this.particles.reset();
-    this.floaters.reset();
-  }
-
-  /* ---- Difficulty -------------------------------------------------------- */
+  /* ---- Difficulty (shared, so battle stays mirrored) --------------------- */
 
   _ramp() {
-    const p = clamp(this.roundTime / TUNE.round.durationSec, 0, 1);
-    return Math.pow(p, 1 + TUNE.difficulty.rampCurve); // ease-in: slow then fast
+    const t = clamp(this.roundTime / TUNE.round.durationSec, 0, 1);
+    return Math.pow(t, 1 + TUNE.difficulty.rampCurve);
+  }
+  _speed() { return lerp(TUNE.difficulty.speedStart, TUNE.difficulty.speedEnd, this._ramp()); }
+  _gap() { return lerp(TUNE.difficulty.gapStart, TUNE.difficulty.gapEnd, this._ramp()); }
+
+  _decideSpawn() {
+    return {
+      type: Math.random() < TUNE.spawn.weedChance ? "weed" : "carrot",
+      lane: (Math.random() * TUNE.spawn.lanesX.length) | 0,
+    };
   }
 
-  _baseSpeed() {
-    return lerp(TUNE.difficulty.speedStart, TUNE.difficulty.speedEnd, this._ramp());
+  _spawnAll(type, lane, z, instant) {
+    for (const p of this.players) p.items.spawn(type, lane, { z, instant });
   }
 
-  _comboSpeedMul() {
-    return clamp(1 + this.combo * TUNE.combo.speedPerCombo, 1, TUNE.combo.speedMaxMul);
-  }
-
-  _currentSpeed() {
-    return this._baseSpeed() * this._comboSpeedMul();
-  }
-
-  _currentGap() {
-    return lerp(TUNE.difficulty.gapStart, TUNE.difficulty.gapEnd, this._ramp());
-  }
-
-  _spawnOne(z, instant) {
-    const isWeed = Math.random() < TUNE.spawn.weedChance;
-    const lane = (Math.random() * TUNE.spawn.lanesX.length) | 0;
-    return this.items.spawn(isWeed ? "weed" : "carrot", lane, { z, instant });
-  }
-
-  /** Pre-fill the row so the field is alive and the first item arrives soon. */
   _prefill() {
-    const speed = this._currentSpeed();
-    const gap = this._currentGap();
-    let z = this.items.zNear - speed * 1.3; // nearest ~1.3s from the zone
+    const speed = this._speed(), gap = this._gap();
+    const zNear = this.players[0].items.zNear;
+    let z = zNear - speed * 1.3;
     while (z > TUNE.spawn.startZ) {
-      this._spawnOne(z, true);
+      const s = this._decideSpawn();
+      this._spawnAll(s.type, s.lane, z, true);
       z -= gap;
     }
-    this.spawnTimer = gap / speed; // resume normal cadence
+    this.spawnTimer = gap / speed;
   }
 
   /* ---- Player actions ---------------------------------------------------- */
 
-  action(kind) { // kind: 'harvest' | 'remove'
-    if (this.state === "attract" || this.state === "results") { this.start(); return; }
-    if (this.state !== "playing") return;
-
-    this.hud.buttonFeedback(kind);
-    const target = this.items.frontmostInZone();
-    if (!target) return; // whiff — forgiving, no penalty (and foils button-mashing)
-
+  action(playerIndex, kind) {
+    if (this.state !== "playing") { this.advance(); return; }
+    const p = this.players[playerIndex];
+    if (!p) return; // e.g. P2 key pressed in solo
+    this.hud.buttonFeedback(p.index, kind);
+    const target = p.items.frontmostInZone();
+    if (!target) return; // whiff — forgiving, and foils button-mashing
     const correct =
       (kind === "harvest" && target.type === "carrot") ||
       (kind === "remove" && target.type === "weed");
-
-    if (correct) this._success(target, kind);
-    else this._wrong(target, kind);
+    if (correct) this._success(p, target, kind);
+    else this._wrong(p, target, kind);
   }
 
-  _success(target, kind) {
-    this.combo += 1;
-    this.bestCombo = Math.max(this.bestCombo, this.combo);
-    const prevMult = this.multiplier;
-    this.multiplier = clamp(
-      1 + Math.floor(this.combo / TUNE.scoring.comboPerMult),
-      1, TUNE.scoring.maxMultiplier
-    );
-    const points = Math.round(TUNE.scoring.basePoints * this.multiplier);
-    this.score += points;
+  _success(p, target, kind) {
+    p.streak += 1;
+    p.bestStreak = Math.max(p.bestStreak, p.streak);
 
-    this.items.popSuccess(target);
-    const intensity = clamp(this.combo / TUNE.combo.intensityFull, 0, 1);
-    this.particles.burst(target.x, 0.4, target.z, target.type, 1 + intensity * 0.5);
-    this.floaters.spawn({ x: target.x, y: 1.3, z: target.z }, "+" + points);
+    let points = TUNE.scoring.basePoints;
+    let bonus = 0;
+    if (p.streak % TUNE.scoring.streakBonusEvery === 0) {
+      const m = p.streak / TUNE.scoring.streakBonusEvery;
+      bonus = Math.min(TUNE.scoring.streakBonusMax, TUNE.scoring.streakBonusStep * m);
+      points += bonus;
+      const pun = STREAK_PUNS[(m - 1) % STREAK_PUNS.length];
+      this.hud.streakToast(p.index, pun, bonus);
+      this.audio.streakBonus(m);
+      this.world.addShake(p.index, 0.35);
+      this.scene.pulseBloom(0.4);
+    }
+    p.score += points;
 
-    this.hud.setScore(this.score);
-    this.hud.setCombo(this.combo, this.multiplier);
-    this.hud.flashGood();
+    p.items.popSuccess(target);
+    const intensity = clamp(p.streak / TUNE.streak.intensityFull, 0, 1);
+    p.particles.burst(target.x, 0.4, target.z, target.type, 1 + intensity * 0.5);
+    p.floaters.spawn({ x: target.x, y: 1.3, z: target.z }, "+" + TUNE.scoring.basePoints);
 
+    this.hud.setScore(p.index, p.score);
+    this.hud.setStreak(p.index, p.streak);
+    this.hud.flashGood(p.index);
     if (kind === "harvest") this.audio.harvest(); else this.audio.remove();
 
-    this.world.setIntensity(intensity);
-    this.scene.setIntensity(intensity);
+    this.world.setIntensity(p.index, intensity);
+    if (p.index === 0) this.scene.setIntensity(intensity);
     this.scene.pulseBloom(0.18 + intensity * 0.3);
-
-    if (this.multiplier > prevMult) {
-      this.audio.combo(this.combo);
-      this.world.addShake(0.4);
-      this.scene.pulseBloom(0.5);
-    } else if (intensity > 0.4) {
-      this.world.addShake(0.12 * intensity);
-    }
+    if (bonus === 0 && intensity > 0.4) this.world.addShake(p.index, 0.1 * intensity);
   }
 
-  _wrong(target, kind) {
-    this.items.popFail(target);
-    this._breakCombo();
+  _wrong(p, target, kind) {
+    p.items.popFail(target);
+    this._breakStreak(p);
     if (TUNE.scoring.missPenalty > 0) {
-      this.score = Math.max(0, this.score - TUNE.scoring.missPenalty);
-      this.hud.setScore(this.score);
+      p.score = Math.max(0, p.score - TUNE.scoring.missPenalty);
+      this.hud.setScore(p.index, p.score);
     }
-    this.floaters.spawn({ x: target.x, y: 1.3, z: target.z }, "Miss", true);
-    this.hud.flashBad();
+    p.floaters.spawn({ x: target.x, y: 1.3, z: target.z }, "Miss", true);
+    this.hud.flashBad(p.index);
     this.audio.miss();
   }
 
-  _onPass(rec) { // an item left the action band unhandled
-    this._breakCombo();
-    this.hud.flashBad();
+  _onPass(p) {
+    this._breakStreak(p);
+    this.hud.flashBad(p.index);
     this.audio.miss();
   }
 
-  _breakCombo() {
-    this.combo = 0;
-    this.multiplier = 1;
-    this.hud.resetCombo();
-    this.world.setIntensity(0);
-    this.scene.setIntensity(0);
+  _breakStreak(p) {
+    p.streak = 0;
+    this.hud.resetStreak(p.index);
+    this.world.setIntensity(p.index, 0);
+    if (p.index === 0) this.scene.setIntensity(0);
   }
 
   /* ---- Per-frame update -------------------------------------------------- */
 
   update(dt) {
-    // Kiosk idle reset (never on the attract screen — it's already "home")
     if (this.state !== "attract") {
       if ((this._now() - this.lastInput) / 1000 > TUNE.round.idleReturnSec) {
         this.enterAttract();
         return;
       }
     }
-
     switch (this.state) {
-      case "attract":   this._updateAttract(dt); break;
+      case "attract":
+      case "menu": this._updateIdle(dt); break;
       case "countdown": this._updateCountdown(dt); break;
-      case "playing":   this._updatePlaying(dt); break;
-      case "results":   this._updateResults(dt); break;
+      case "playing": this._updatePlaying(dt); break;
+      case "results":
+      case "battleResults": this._updateResults(dt); break;
     }
-    this.particles.update(dt);
   }
 
-  _updateAttract(dt) {
+  _updateIdle(dt) {
+    const p = this.allPlayers[0];
     const speed = TUNE.difficulty.speedStart * 0.55;
     this.world.update(dt, speed);
-
     this.demoTimer -= dt;
     if (this.demoTimer <= 0) {
-      this._spawnOne(TUNE.spawn.startZ, false);
+      const s = this._decideSpawn();
+      p.items.spawn(s.type, s.lane, { z: TUNE.spawn.startZ });
       this.demoTimer = 1.1 + Math.random() * 1.0;
     }
-    this.items.update(dt, speed, null);
-
-    // Auto-harvest demo items as they reach the band, so it looks alive
-    const t = this.items.frontmostInZone();
-    if (t && t.z >= this.items.zoneCenter) {
-      this.items.popSuccess(t);
-      this.particles.burst(t.x, 0.4, t.z, t.type, 1);
+    p.items.update(dt, speed, null);
+    p.particles.update(dt);
+    const t = p.items.frontmostInZone();
+    if (t && t.z >= p.items.zoneCenter) {
+      p.items.popSuccess(t);
+      p.particles.burst(t.x, 0.4, t.z, t.type, 1);
     }
   }
 
   _updateCountdown(dt) {
     this.world.update(dt, TUNE.difficulty.speedStart * 0.4);
+    for (const p of this.players) p.particles.update(dt);
     this.countdownT -= dt;
     if (this.countdownT > 0) {
       const n = Math.ceil(this.countdownT);
-      if (n !== this._lastCount) {
-        this._lastCount = n;
-        this.hud.showCountdown(String(n));
-        this.audio.tick();
-      }
+      if (n !== this._lastCount) { this._lastCount = n; this.hud.showCountdown(String(n)); this.audio.tick(); }
     } else if (!this._goShown) {
       this._goShown = true;
       this.hud.showCountdown("GO!");
@@ -306,28 +349,29 @@ export class Game {
 
   _updatePlaying(dt) {
     this.roundTime += dt;
-    const speed = this._currentSpeed();
-    const gap = this._currentGap();
+    const speed = this._speed(), gap = this._gap();
 
-    // distance-based spawn pacing keeps items ~gap apart at any speed
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0) {
-      this._spawnOne(TUNE.spawn.startZ, false);
+      const s = this._decideSpawn();
+      this._spawnAll(s.type, s.lane, TUNE.spawn.startZ, false);
       this.spawnTimer += gap / speed;
       if (this.spawnTimer < 0) this.spawnTimer = gap / speed;
     }
 
-    this.items.update(dt, speed, (rec) => this._onPass(rec));
+    for (const p of this.players) {
+      p.items.update(dt, speed, () => this._onPass(p));
+      p.particles.update(dt);
+    }
     this.world.update(dt, speed);
 
-    const remain = clamp(1 - this.roundTime / TUNE.round.durationSec, 0, 1);
-    this.hud.setTimer(remain);
-
+    this.hud.setTimer(clamp(1 - this.roundTime / TUNE.round.durationSec, 0, 1));
     if (this.roundTime >= TUNE.round.durationSec) this.endRound();
   }
 
   _updateResults(dt) {
-    this.world.update(dt, TUNE.difficulty.speedStart * 0.4);
-    this.items.update(dt, TUNE.difficulty.speedStart * 0.4, null);
+    const speed = TUNE.difficulty.speedStart * 0.4;
+    this.world.update(dt, speed);
+    for (const p of this.players) p.particles.update(dt);
   }
 }
