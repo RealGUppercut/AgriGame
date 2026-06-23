@@ -40,11 +40,12 @@ const fakeAudio = {
   muted: true, unlock() {}, start() {}, harvest() {}, remove() {}, combo() {}, streakBonus() {},
   miss() {}, tick() {}, go() {}, results() {}, resume() {}, toggle() { return true; },
 };
+const fxLog = { bonus: 0, oops: 0 };
 const mkMockPlayer = (index, layer) => ({
   index,
   items: new Items(fakeScene, fakeAssets, layer),
   particles: { burst() {}, update() {}, reset() {} },
-  floaters: { spawn() {}, reset() {} },
+  floaters: { spawn(_p, _t, cls) { if (cls === "bonus") fxLog.bonus++; else if (cls === "bad") fxLog.oops++; }, reset() {} },
   score: 0, streak: 0, bestStreak: 0,
 });
 
@@ -101,14 +102,14 @@ console.log("\n[1] Solo flow: attract → menu → countdown → playing → res
 
 console.log("\n[2] Streak-only scoring: score grows, streak climbs, bonuses fire");
 {
-  hudLog.toasts = 0;
+  fxLog.bonus = 0;
   const { game, players } = makeGame();
   startGame(game, "solo");
   let maxStreak = 0;
   for (let i = 0; i < Math.round(25 / DT); i++) { frame(game, true); maxStreak = Math.max(maxStreak, players[0].streak); }
   ok(players[0].score > 0, "score grew (" + players[0].score + ")");
   ok(maxStreak >= TUNE.scoring.streakBonusEvery, "streak climbed past a milestone (" + maxStreak + ")");
-  ok(hudLog.toasts >= 1, "at least one streak-bonus toast fired (" + hudLog.toasts + ")");
+  ok(fxLog.bonus >= 1, "a streak-bonus message floated off the crop (" + fxLog.bonus + ")");
   ok(typeof game.multiplier === "undefined", "no multiplier concept remains");
 }
 
@@ -118,6 +119,7 @@ console.log("\n[3] A miss resets the streak");
   startGame(game, "solo");
   let g = 0; while (players[0].streak < 3 && g++ < Math.round(15 / DT)) frame(game, true);
   const before = players[0].streak;
+  fxLog.oops = 0;
   let did = false; g = 0;
   while (!did && g++ < Math.round(10 / DT)) {
     mockTime += DT * 1000; game.update(DT);
@@ -126,6 +128,7 @@ console.log("\n[3] A miss resets the streak");
   }
   ok(before >= 3, "had a streak (" + before + ")");
   ok(did && players[0].streak === 0, "wrong action reset streak to 0");
+  ok(fxLog.oops > 0, "wrong action shows 'oops!' on the crop");
 }
 
 console.log("\n[4] Mashing is safe and can't keep a streak");

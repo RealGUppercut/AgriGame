@@ -32,8 +32,8 @@ export class Floaters {
     return n;
   }
 
-  /** Show "text" above world position (THREE.Vector3-like {x,y,z}). */
-  spawn(worldPos, text, bad = false) {
+  /** Show "text" above world position. `cls` adds a modifier class (bonus/bad). */
+  spawn(worldPos, text, cls) {
     const cam = this.getCamera();
     if (!cam) return;
     _v.set(worldPos.x, worldPos.y, worldPos.z).project(cam);
@@ -48,7 +48,7 @@ export class Floaters {
     if (n.timer) clearTimeout(n.timer);
     const el = n.el;
     el.textContent = text;
-    el.className = "floater" + (bad ? " bad" : "");
+    el.className = "floater" + (cls ? " " + cls : "");
     el.style.left = x + "px";
     el.style.top = y + "px";
     el.style.display = "block";

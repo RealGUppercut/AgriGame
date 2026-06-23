@@ -244,7 +244,8 @@ export class Game {
       bonus = Math.min(TUNE.scoring.streakBonusMax, TUNE.scoring.streakBonusStep * m);
       points += bonus;
       const pun = STREAK_PUNS[(m - 1) % STREAK_PUNS.length];
-      this.hud.streakToast(p.index, pun, bonus);
+      // Encouraging message floats up FROM the crop (centred on it), not a corner.
+      p.floaters.spawn({ x: target.x, y: 2.2, z: target.z }, pun + "  +" + bonus, "bonus");
       this.audio.streakBonus(m);
       this.world.addShake(p.index, 0.35);
       this.scene.pulseBloom(0.4);
@@ -254,7 +255,7 @@ export class Game {
     p.items.popSuccess(target);
     const intensity = clamp(p.streak / TUNE.streak.intensityFull, 0, 1);
     p.particles.burst(target.x, 0.4, target.z, target.type, 1 + intensity * 0.5);
-    p.floaters.spawn({ x: target.x, y: 1.3, z: target.z }, "+" + TUNE.scoring.basePoints);
+    p.floaters.spawn({ x: target.x, y: 1.2, z: target.z }, "+" + TUNE.scoring.basePoints);
 
     this.hud.setScore(p.index, p.score);
     this.hud.setStreak(p.index, p.streak);
@@ -274,13 +275,14 @@ export class Game {
       p.score = Math.max(0, p.score - TUNE.scoring.missPenalty);
       this.hud.setScore(p.index, p.score);
     }
-    p.floaters.spawn({ x: target.x, y: 1.3, z: target.z }, "Miss", true);
+    p.floaters.spawn({ x: target.x, y: 1.3, z: target.z }, "oops!", "bad");
     this.hud.flashBad(p.index);
     this.audio.miss();
   }
 
-  _onPass(p) {
+  _onPass(p, rec) {
     this._breakStreak(p);
+    if (rec) p.floaters.spawn({ x: rec.x, y: 1.3, z: rec.z }, "oops!", "bad");
     this.hud.flashBad(p.index);
     this.audio.miss();
   }
@@ -360,7 +362,7 @@ export class Game {
     }
 
     for (const p of this.players) {
-      p.items.update(dt, speed, () => this._onPass(p));
+      p.items.update(dt, speed, (rec) => this._onPass(p, rec));
       p.particles.update(dt);
     }
     this.world.update(dt, speed);
