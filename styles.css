@@ -853,7 +853,3 @@ body.mode-battle #p2-hud .hud-label::after { content: " \2014 P2"; opacity: 0.7;
   animation: none;
 }
 .submit-score .cta-main { font-size: clamp(17px, 2.8vw, 24px); }
-
-.battle-menu-only .big-cta {
-  margin-top: 4px;
-}

@@ -85,15 +85,13 @@ export function initInput(handlers) {
 
   const modeCards = document.querySelector(".mode-cards");
   if (modeCards) {
-    const onModePick = (e) => {
+    modeCards.addEventListener("pointerdown", (e) => {
       const card = e.target.closest && e.target.closest(".mode-card");
       if (!card) return;
       e.preventDefault();
       any();
-      activateModeCard(card);
-    };
-    modeCards.addEventListener("pointerdown", onModePick);
-    modeCards.addEventListener("click", onModePick);
+      h.onSelectMode && h.onSelectMode(card.id === "btn-battle" ? "battle" : "solo");
+    });
   }
 
   // Tap the welcome screen to advance (guarded in game). Results/battle screens
