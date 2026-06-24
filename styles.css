@@ -89,6 +89,12 @@ html, body {
 }
 .screen-layer.hidden {
   opacity: 0;
+}
+/* A hidden screen (and everything in it) must never capture pointer events —
+   otherwise its invisible panel, stacked on top, eats clicks meant for the
+   screen below it (this was breaking the mode-select cards). */
+.screen-layer.hidden,
+.screen-layer.hidden * {
   pointer-events: none !important;
 }
 
@@ -461,22 +467,30 @@ html, body {
   position: absolute;
   transform: translate(-50%, -50%);
   font-weight: 700;
-  font-size: clamp(22px, 4vw, 40px);
+  font-size: clamp(25px, 4.6vw, 46px); /* points/oops ~15% larger */
   color: var(--gold);
   text-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 0 16px rgba(255,201,77,0.8);
   white-space: nowrap;
   will-change: transform, opacity;
-  animation: float-up 0.95s ease-out forwards;
+  animation: float-up 0.95s ease-out forwards; /* points/oops timing (unchanged) */
 }
 .floater.bad { color: #ff8e7a; text-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 0 12px rgba(255,80,50,0.6); }
+/* Streak message: ~15% larger AND lingers long enough to read (own animation). */
 .floater.bonus {
   color: #d6ffb0;
-  font-size: clamp(18px, 3vw, 30px);
+  font-size: clamp(21px, 3.45vw, 34px);
   text-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 0 16px rgba(120,255,140,0.9);
+  animation: float-bonus 2s ease-out forwards;
 }
 @keyframes float-up {
   0%   { opacity: 0; transform: translate(-50%, -40%) scale(0.7); }
   20%  { opacity: 1; transform: translate(-50%, -60%) scale(1.1); }
+  100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
+}
+@keyframes float-bonus {
+  0%   { opacity: 0; transform: translate(-50%, -40%) scale(0.7); }
+  10%  { opacity: 1; transform: translate(-50%, -64%) scale(1.12); }
+  78%  { opacity: 1; transform: translate(-50%, -92%) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
 }
 
@@ -591,25 +605,27 @@ body.show-sound #sound-toggle { display: inline-flex; }
 
 #hud { pointer-events: none; }
 
-/* ---- Shared timer (top centre) ------------------------------------------ */
-#timer-wrap {
+/* ---- Top-centre HUD: score(s) with the timer bar directly below ---------- */
+#hud-center {
   position: absolute;
-  top: clamp(10px, 2.4vh, 20px);
+  top: clamp(8px, 2vh, 16px);
   left: 50%;
   transform: translateX(-50%);
-  width: min(46vw, 380px);
-  z-index: 12;
-}
-
-/* ---- Per-player score / streak ------------------------------------------ */
-.player-hud {
-  position: absolute;
-  top: clamp(8px, 2vh, 18px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(6px, 1vh, 10px);
   z-index: 12;
   pointer-events: none;
 }
-#p1-hud { left: clamp(12px, 3vw, 30px); text-align: left; }
-#p2-hud { right: clamp(12px, 3vw, 30px); text-align: right; }
+#scores-row {
+  display: flex;
+  gap: clamp(24px, 7vw, 90px);
+  align-items: flex-start;
+  justify-content: center;
+}
+.player-hud { text-align: center; pointer-events: none; }
+#timer-wrap { width: min(48vw, 420px); max-width: none; flex: 0 0 auto; margin: 0; }
 .ph-score {
   font-size: clamp(30px, 6vw, 60px);
   font-weight: 700;

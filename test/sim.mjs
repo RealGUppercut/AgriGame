@@ -151,7 +151,7 @@ console.log("\n[5] Pooling stays bounded across solo rounds");
   let maxActive = 0;
   for (let r = 0; r < 3; r++) {
     for (let i = 0; i < Math.round(TUNE.round.durationSec / DT); i++) { frame(game, true, 0.8); maxActive = Math.max(maxActive, players[0].items.active.length); }
-    game.advance(); let g = 0; while (game.state !== "playing" && g++ < 1000) frame(game, false);
+    startGame(game, "solo"); // replay now goes via the welcome → mode flow
   }
   const it = players[0].items;
   const total = it.active.length + it.freeCarrots.length + it.freeWeeds.length;
@@ -217,6 +217,12 @@ console.log("\n[10] Solo results name flow");
   game.updatePending("Sam", "STEM Club");
   const mine = storage.getTopScores().find((s) => s.ts === game.pendingTs);
   ok(mine && mine.name === "Sam" && mine.org === "STEM Club", "typed name/org saved");
+  // any key / tap must NOT leave the results screen...
+  game.advance();
+  ok(game.state === "results", "a generic key/tap does not leave results");
+  // ...only the SUBMIT button (goHome) returns to the welcome screen
+  game.goHome();
+  ok(game.state === "attract", "SUBMIT returns to the welcome screen");
 }
 
 console.log("\n[11] Crop Battle: 2 players, identical spawns, independent winner");

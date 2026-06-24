@@ -32,24 +32,22 @@
       <div id="p1-flash" class="pflash"></div>
       <div id="p2-flash" class="pflash"></div>
 
-      <div id="timer-wrap"><div id="timer-bar"><div id="timer-fill"></div></div></div>
-
-      <!-- Player 1 -->
-      <div id="p1-hud" class="player-hud">
-        <div class="hud-label">SCORE</div>
-        <div id="p1-score" class="ph-score">0</div>
-        <div id="p1-streak" class="ph-streak hidden"><span id="p1-streak-val">0</span> streak</div>
+      <!-- Score(s) top-centre, timer bar directly below -->
+      <div id="hud-center">
+        <div id="scores-row">
+          <div id="p1-hud" class="player-hud">
+            <div class="hud-label">SCORE</div>
+            <div id="p1-score" class="ph-score">0</div>
+            <div id="p1-streak" class="ph-streak hidden"><span id="p1-streak-val">0</span> streak</div>
+          </div>
+          <div id="p2-hud" class="player-hud right">
+            <div class="hud-label">SCORE</div>
+            <div id="p2-score" class="ph-score">0</div>
+            <div id="p2-streak" class="ph-streak hidden"><span id="p2-streak-val">0</span> streak</div>
+          </div>
+        </div>
+        <div id="timer-wrap"><div id="timer-bar"><div id="timer-fill"></div></div></div>
       </div>
-      <!-- Player 2 (battle only) -->
-      <div id="p2-hud" class="player-hud right">
-        <div class="hud-label">SCORE</div>
-        <div id="p2-score" class="ph-score">0</div>
-        <div id="p2-streak" class="ph-streak hidden"><span id="p2-streak-val">0</span> streak</div>
-      </div>
-
-      <!-- Streak-bonus toasts -->
-      <div id="p1-toast" class="streak-toast"></div>
-      <div id="p2-toast" class="streak-toast"></div>
 
       <!-- Per-player floating "+points" layers -->
       <div id="p1-floaters" class="floaters"></div>
@@ -150,10 +148,9 @@
 
         <div class="result-buttons">
           <button id="btn-again" class="big-cta" type="button">
-            <span class="cta-main">PLAY AGAIN</span>
-            <span class="cta-sub">Tap / Press any key</span>
+            <span class="cta-main">SUBMIT</span>
+            <span class="cta-sub">Save &amp; back to menu</span>
           </button>
-          <button id="btn-results-menu" class="text-btn" type="button">Main menu</button>
         </div>
       </div>
     </div>
@@ -177,10 +174,9 @@
         </div>
         <div class="result-buttons">
           <button id="btn-rematch" class="big-cta" type="button">
-            <span class="cta-main">REMATCH</span>
-            <span class="cta-sub">Tap / Press any key</span>
+            <span class="cta-main">CONTINUE</span>
+            <span class="cta-sub">Back to menu</span>
           </button>
-          <button id="btn-battle-menu" class="text-btn" type="button">Main menu</button>
         </div>
       </div>
     </div>

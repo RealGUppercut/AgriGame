@@ -40,7 +40,8 @@ export function initInput(handlers) {
     const ae = document.activeElement;
     if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) {
       any();
-      if (e.key === "Enter") { e.preventDefault(); ae.blur(); h.onStart && h.onStart(); }
+      // Enter just dismisses the keyboard; advancing requires the SUBMIT button.
+      if (e.key === "Enter") { e.preventDefault(); ae.blur(); }
       return;
     }
 
@@ -73,13 +74,11 @@ export function initInput(handlers) {
   bind("p2-remove", () => h.onAction && h.onAction(1, "remove"));
 
   bind("btn-start", () => h.onStart && h.onStart());
-  bind("btn-again", () => h.onStart && h.onStart());
-  bind("btn-rematch", () => h.onStart && h.onStart());
+  bind("btn-again", () => h.onHome && h.onHome());     // solo SUBMIT → welcome
+  bind("btn-rematch", () => h.onHome && h.onHome());   // battle CONTINUE → welcome
   bind("btn-solo", () => h.onSelectMode && h.onSelectMode("solo"));
   bind("btn-battle", () => h.onSelectMode && h.onSelectMode("battle"));
   bind("btn-mode-back", () => h.onHome && h.onHome());
-  bind("btn-results-menu", () => h.onHome && h.onHome());
-  bind("btn-battle-menu", () => h.onHome && h.onHome());
 
   // Tap the welcome screen to advance (guarded in game). Results/battle screens
   // use their explicit buttons (they contain form fields / multiple choices).

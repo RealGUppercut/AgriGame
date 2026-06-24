@@ -6,13 +6,7 @@
   <meta name="theme-color" content="#3c82c4" />
   <title>Crop Vision — Precision Harvest Challenge (offline)</title>
   <link rel="stylesheet" href="./styles.css" />
-  <!-- OFFLINE / file:// build: single prebuilt classic script, no server/import map. Regenerate: node tools/build-offline.mjs (then rebuild this file). -->
-
-  <!--
-    Three.js is VENDORED LOCALLY in /vendor (no CDN / no internet needed at runtime).
-    The import map below points the bare "three" / "three/addons/" specifiers at those
-    local files. To switch to a CDN, replace the two URLs below.
-  -->
+  <!-- OFFLINE / file:// build: prebuilt classic bundle, no server/import map. Rebuild: node tools/build-offline.mjs -->
 </head>
 <body class="mode-solo">
   <canvas id="scene-canvas"></canvas>
@@ -25,24 +19,22 @@
       <div id="p1-flash" class="pflash"></div>
       <div id="p2-flash" class="pflash"></div>
 
-      <div id="timer-wrap"><div id="timer-bar"><div id="timer-fill"></div></div></div>
-
-      <!-- Player 1 -->
-      <div id="p1-hud" class="player-hud">
-        <div class="hud-label">SCORE</div>
-        <div id="p1-score" class="ph-score">0</div>
-        <div id="p1-streak" class="ph-streak hidden"><span id="p1-streak-val">0</span> streak</div>
+      <!-- Score(s) top-centre, timer bar directly below -->
+      <div id="hud-center">
+        <div id="scores-row">
+          <div id="p1-hud" class="player-hud">
+            <div class="hud-label">SCORE</div>
+            <div id="p1-score" class="ph-score">0</div>
+            <div id="p1-streak" class="ph-streak hidden"><span id="p1-streak-val">0</span> streak</div>
+          </div>
+          <div id="p2-hud" class="player-hud right">
+            <div class="hud-label">SCORE</div>
+            <div id="p2-score" class="ph-score">0</div>
+            <div id="p2-streak" class="ph-streak hidden"><span id="p2-streak-val">0</span> streak</div>
+          </div>
+        </div>
+        <div id="timer-wrap"><div id="timer-bar"><div id="timer-fill"></div></div></div>
       </div>
-      <!-- Player 2 (battle only) -->
-      <div id="p2-hud" class="player-hud right">
-        <div class="hud-label">SCORE</div>
-        <div id="p2-score" class="ph-score">0</div>
-        <div id="p2-streak" class="ph-streak hidden"><span id="p2-streak-val">0</span> streak</div>
-      </div>
-
-      <!-- Streak-bonus toasts -->
-      <div id="p1-toast" class="streak-toast"></div>
-      <div id="p2-toast" class="streak-toast"></div>
 
       <!-- Per-player floating "+points" layers -->
       <div id="p1-floaters" class="floaters"></div>
@@ -143,10 +135,9 @@
 
         <div class="result-buttons">
           <button id="btn-again" class="big-cta" type="button">
-            <span class="cta-main">PLAY AGAIN</span>
-            <span class="cta-sub">Tap / Press any key</span>
+            <span class="cta-main">SUBMIT</span>
+            <span class="cta-sub">Save &amp; back to menu</span>
           </button>
-          <button id="btn-results-menu" class="text-btn" type="button">Main menu</button>
         </div>
       </div>
     </div>
@@ -170,10 +161,9 @@
         </div>
         <div class="result-buttons">
           <button id="btn-rematch" class="big-cta" type="button">
-            <span class="cta-main">REMATCH</span>
-            <span class="cta-sub">Tap / Press any key</span>
+            <span class="cta-main">CONTINUE</span>
+            <span class="cta-sub">Back to menu</span>
           </button>
-          <button id="btn-battle-menu" class="text-btn" type="button">Main menu</button>
         </div>
       </div>
     </div>

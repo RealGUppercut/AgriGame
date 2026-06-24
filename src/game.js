@@ -94,11 +94,12 @@ export class Game {
     this.noteInput();
   }
 
-  /** Generic "advance / confirm" press (Start, Play Again, Rematch, taps). */
+  /** Generic "advance / confirm" press (any key / tap). */
   advance() {
     if (this.state === "attract") this.enterMenu();
-    else if (this.state === "results" || this.state === "battleResults") this.startRound(this.mode);
-    // menu: ignore — the player must pick Solo or Crop Battle explicitly
+    // results / battleResults: a generic key/tap does NOT advance — the player
+    // must press the explicit SUBMIT / CONTINUE button (which calls goHome()).
+    // menu: ignore — the player must pick Solo or Crop Battle explicitly.
   }
 
   selectMode(mode) {

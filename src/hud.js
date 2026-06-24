@@ -25,7 +25,6 @@ export class HUD {
     this.score = [$("p1-score"), $("p2-score")];
     this.streakBox = [$("p1-streak"), $("p2-streak")];
     this.streakVal = [$("p1-streak-val"), $("p2-streak-val")];
-    this.toast = [$("p1-toast"), $("p2-toast")];
     this.flash = [$("p1-flash"), $("p2-flash")];
     this.btnHarvest = [$("p1-harvest"), $("p2-harvest")];
     this.btnRemove = [$("p1-remove"), $("p2-remove")];
@@ -94,13 +93,6 @@ export class HUD {
   resetStreak(i) {
     if (this.streakBox[i]) this.streakBox[i].classList.add("hidden");
     this._lastStreak[i] = 0;
-  }
-
-  streakToast(i, pun, bonus) {
-    const el = this.toast[i];
-    if (!el) return;
-    el.innerHTML = `<span class="st-pts">+${bonus}</span> ${pun}`;
-    el.classList.remove("show"); void el.offsetWidth; el.classList.add("show");
   }
 
   setTimer(frac) {
