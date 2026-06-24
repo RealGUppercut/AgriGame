@@ -63,23 +63,8 @@ export function initInput(handlers) {
   const bind = (id, fn) => {
     const el = document.getElementById(id);
     if (!el) return;
-    let lastPointer = 0;
-    const run = (e) => {
-      e.preventDefault();
-      any();
-      fn();
-    };
-    el.addEventListener("pointerdown", (e) => {
-      lastPointer = Date.now();
-      run(e);
-    });
-    // Some kiosk/browser combinations dispatch click but not pointerdown reliably.
-    // Keep click as a fallback, while suppressing the synthetic click that follows
-    // a normal pointerdown so action buttons never fire twice.
-    el.addEventListener("click", (e) => {
-      if (Date.now() - lastPointer < 500) { e.preventDefault(); return; }
-      run(e);
-    });
+    const run = (e) => { e.preventDefault(); any(); fn(); };
+    el.addEventListener("pointerdown", run);
   };
   bind("p1-harvest", () => h.onAction && h.onAction(0, "harvest"));
   bind("p1-remove", () => h.onAction && h.onAction(0, "remove"));
@@ -100,21 +85,12 @@ export function initInput(handlers) {
 
   const modeCards = document.querySelector(".mode-cards");
   if (modeCards) {
-    let lastModePointer = 0;
-    const onModePick = (e) => {
+    modeCards.addEventListener("pointerdown", (e) => {
       const card = e.target.closest && e.target.closest(".mode-card");
       if (!card) return;
       e.preventDefault();
       any();
-      activateModeCard(card);
-    };
-    modeCards.addEventListener("pointerdown", (e) => {
-      lastModePointer = Date.now();
-      onModePick(e);
-    });
-    modeCards.addEventListener("click", (e) => {
-      if (Date.now() - lastModePointer < 500) { e.preventDefault(); return; }
-      onModePick(e);
+      h.onSelectMode && h.onSelectMode(card.id === "btn-battle" ? "battle" : "solo");
     });
   }
 
