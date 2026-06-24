@@ -73,9 +73,11 @@ export function initInput(handlers) {
 
   bind("btn-start", () => h.onStart && h.onStart());
   bind("btn-again", () => h.onStart && h.onStart());
-  bind("btn-rematch", () => h.onStart && h.onStart());
-  bind("btn-solo", () => h.onSelectMode && h.onSelectMode("solo"));
-  bind("btn-battle", () => h.onSelectMode && h.onSelectMode("battle"));
+
+  const activateModeCard = (card) => {
+    if (!card) return;
+    h.onSelectMode && h.onSelectMode(card.id === "btn-battle" ? "battle" : "solo");
+  };
   bind("btn-mode-back", () => h.onHome && h.onHome());
   bind("btn-results-menu", () => h.onHome && h.onHome());
   bind("btn-battle-menu", () => h.onHome && h.onHome());
