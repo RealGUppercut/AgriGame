@@ -57,11 +57,12 @@ export class Floaters {
     void el.offsetWidth;
     el.style.animation = "";
     n.free = false;
+    const duration = cls === "bonus" ? 2200 : 950;
     n.timer = setTimeout(() => {
       el.style.display = "none";
       n.free = true;
       n.timer = 0;
-    }, 950);
+    }, duration);
   }
 
   reset() {

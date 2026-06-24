@@ -249,6 +249,9 @@ html, body {
 .ne-fields { display: flex; flex-direction: column; gap: 8px; }
 .ne-input {
   pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
   width: 100%;
   padding: 11px 14px;
   border-radius: 13px;
@@ -461,7 +464,7 @@ html, body {
   position: absolute;
   transform: translate(-50%, -50%);
   font-weight: 700;
-  font-size: clamp(22px, 4vw, 40px);
+  font-size: clamp(25px, 4.6vw, 46px);
   color: var(--gold);
   text-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 0 16px rgba(255,201,77,0.8);
   white-space: nowrap;
@@ -471,7 +474,8 @@ html, body {
 .floater.bad { color: #ff8e7a; text-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 0 12px rgba(255,80,50,0.6); }
 .floater.bonus {
   color: #d6ffb0;
-  font-size: clamp(18px, 3vw, 30px);
+  font-size: clamp(21px, 3.45vw, 35px);
+  animation-duration: 2.2s;
   text-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 0 16px rgba(120,255,140,0.9);
 }
 @keyframes float-up {
@@ -592,9 +596,22 @@ body.show-sound #sound-toggle { display: inline-flex; }
 #hud { pointer-events: none; }
 
 /* ---- Shared timer (top centre) ------------------------------------------ */
+#hud-score-strip {
+  position: absolute;
+  top: clamp(8px, 2vh, 18px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 12;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: clamp(30px, 8vw, 96px);
+  min-width: min(72vw, 620px);
+}
 #timer-wrap {
   position: absolute;
-  top: clamp(10px, 2.4vh, 20px);
+  top: clamp(72px, 13vh, 118px);
   left: 50%;
   transform: translateX(-50%);
   width: min(46vw, 380px);
@@ -603,15 +620,14 @@ body.show-sound #sound-toggle { display: inline-flex; }
 
 /* ---- Per-player score / streak ------------------------------------------ */
 .player-hud {
-  position: absolute;
-  top: clamp(8px, 2vh, 18px);
+  position: static;
   z-index: 12;
   pointer-events: none;
+  text-align: center;
 }
-#p1-hud { left: clamp(12px, 3vw, 30px); text-align: left; }
-#p2-hud { right: clamp(12px, 3vw, 30px); text-align: right; }
+#p1-hud, #p2-hud { text-align: center; }
 .ph-score {
-  font-size: clamp(30px, 6vw, 60px);
+  font-size: clamp(34px, 6.5vw, 68px);
   font-weight: 700;
   line-height: 1;
   color: #fff;
@@ -638,7 +654,7 @@ body.show-sound #sound-toggle { display: inline-flex; }
   pointer-events: none;
   opacity: 0;
   font-weight: 700;
-  font-size: clamp(15px, 2.4vw, 22px);
+  font-size: clamp(17px, 2.75vw, 25px);
   color: #fff;
   text-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 0 16px rgba(120,255,140,0.8);
   white-space: nowrap;
@@ -646,11 +662,11 @@ body.show-sound #sound-toggle { display: inline-flex; }
 #p1-toast { left: clamp(12px, 3vw, 30px); text-align: left; }
 #p2-toast { right: clamp(12px, 3vw, 30px); text-align: right; }
 .streak-toast .st-pts { color: var(--gold); }
-.streak-toast.show { animation: toast-pop 1.15s ease-out; }
+.streak-toast.show { animation: toast-pop 2.2s ease-out; }
 @keyframes toast-pop {
   0%   { opacity: 0; transform: translateY(8px) scale(0.8); }
-  18%  { opacity: 1; transform: translateY(0) scale(1.05); }
-  70%  { opacity: 1; transform: translateY(-4px) scale(1); }
+  12%  { opacity: 1; transform: translateY(0) scale(1.05); }
+  82%  { opacity: 1; transform: translateY(-4px) scale(1); }
   100% { opacity: 0; transform: translateY(-16px) scale(1); }
 }
 
@@ -745,7 +761,9 @@ body.mode-battle #p2-hud .hud-label::after { content: " \2014 P2"; opacity: 0.7;
 .mode-card {
   pointer-events: auto;
   flex: 0 0 auto;
+  position: relative;
   width: clamp(200px, 30vw, 300px);
+  min-height: clamp(190px, 28vh, 250px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -757,11 +775,23 @@ body.mode-battle #p2-hud .hud-label::after { content: " \2014 P2"; opacity: 0.7;
   color: var(--cream);
   font-family: var(--font);
   cursor: pointer;
-  transition: transform 0.1s ease, border-color 0.1s ease, background 0.1s ease;
+  touch-action: manipulation;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
 }
 .mode-card.battle { background: linear-gradient(180deg, rgba(226,79,59,0.24), rgba(38,60,86,0.5)); }
-.mode-card:active { transform: translateY(3px); }
-.mode-card:hover { border-color: var(--gold); }
+.mode-card:hover,
+.mode-card:focus-visible {
+  border-color: var(--gold);
+  filter: brightness(1.08);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.34), 0 0 0 4px rgba(255,201,77,0.18), inset 0 1px 0 rgba(255,255,255,0.16);
+  transform: translateY(-2px);
+}
+.mode-card:active {
+  filter: brightness(1.12);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.3), 0 0 0 4px rgba(255,201,77,0.22);
+  transform: translateY(3px);
+}
 .mc-title { font-size: clamp(24px, 4vw, 38px); font-weight: 700; letter-spacing: 1px; }
 .mc-sub { font-size: clamp(13px, 2vw, 17px); font-weight: 600; opacity: 0.9; }
 .mc-keys { font-size: clamp(11px, 1.7vw, 14px); font-weight: 600; color: #ffd98a; }
@@ -815,3 +845,15 @@ body.mode-battle #p2-hud .hud-label::after { content: " \2014 P2"; opacity: 0.7;
 .bc-streak { font-size: clamp(12px, 1.8vw, 15px); opacity: 0.75; margin-top: 2px; }
 .vs { font-size: clamp(20px, 3vw, 30px); font-weight: 700; color: var(--gold); }
 .result-buttons { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+.submit-score {
+  align-self: center;
+  margin-top: 2px;
+  padding: 10px 28px;
+  animation: none;
+}
+.submit-score .cta-main { font-size: clamp(17px, 2.8vw, 24px); }
+
+.battle-menu-only .big-cta {
+  margin-top: 4px;
+}

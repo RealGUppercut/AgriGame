@@ -97,8 +97,8 @@ export class Game {
   /** Generic "advance / confirm" press (Start, Play Again, Rematch, taps). */
   advance() {
     if (this.state === "attract") this.enterMenu();
-    else if (this.state === "results" || this.state === "battleResults") this.startRound(this.mode);
-    // menu: ignore — the player must pick Solo or Crop Battle explicitly
+    // menu: ignore — the player must pick Solo or Crop Battle explicitly.
+    // results: ignore keyboard/ambient input; players must use explicit buttons.
   }
 
   selectMode(mode) {
@@ -153,7 +153,7 @@ export class Game {
     this.pendingTs = res.rank > 0 ? res.ts : null;
     this.hud.showResults({
       score: p.score, bestStreak: p.bestStreak, isBest: res.isBest,
-      scores: res.scores, highlightTs: res.ts, madeBoard: res.rank > 0,
+      scores: res.scores, highlightTs: res.ts, madeBoard: true,
     });
     this.hud.showScreen("results");
     this.audio.results();
@@ -183,6 +183,11 @@ export class Game {
     if (!this.pendingTs) return;
     const scores = this.storage.updateScore(this.pendingTs, name, org);
     this.hud.refreshResultsBoard(scores, this.pendingTs);
+  }
+
+  submitScore(name, org) {
+    this.updatePending(name, org);
+    this.enterAttract();
   }
 
   /* ---- Difficulty (shared, so battle stays mirrored) --------------------- */

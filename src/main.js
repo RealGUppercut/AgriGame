@@ -79,6 +79,10 @@ async function boot() {
     onEscape: () => game.goHome(),
     onSelectMode: (m) => game.selectMode(m),
     onHome: () => game.goHome(),
+    onSubmitScore: () => game.submitScore(
+      document.getElementById("name-input") ? document.getElementById("name-input").value : "",
+      document.getElementById("org-input") ? document.getElementById("org-input").value : "",
+    ),
     onAnyInput: () => game.noteInput(),
   });
 

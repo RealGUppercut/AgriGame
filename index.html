@@ -32,20 +32,19 @@
       <div id="p1-flash" class="pflash"></div>
       <div id="p2-flash" class="pflash"></div>
 
+      <div id="hud-score-strip">
+        <div id="p1-hud" class="player-hud">
+          <div class="hud-label">SCORE</div>
+          <div id="p1-score" class="ph-score">0</div>
+          <div id="p1-streak" class="ph-streak hidden"><span id="p1-streak-val">0</span> streak</div>
+        </div>
+        <div id="p2-hud" class="player-hud right">
+          <div class="hud-label">SCORE</div>
+          <div id="p2-score" class="ph-score">0</div>
+          <div id="p2-streak" class="ph-streak hidden"><span id="p2-streak-val">0</span> streak</div>
+        </div>
+      </div>
       <div id="timer-wrap"><div id="timer-bar"><div id="timer-fill"></div></div></div>
-
-      <!-- Player 1 -->
-      <div id="p1-hud" class="player-hud">
-        <div class="hud-label">SCORE</div>
-        <div id="p1-score" class="ph-score">0</div>
-        <div id="p1-streak" class="ph-streak hidden"><span id="p1-streak-val">0</span> streak</div>
-      </div>
-      <!-- Player 2 (battle only) -->
-      <div id="p2-hud" class="player-hud right">
-        <div class="hud-label">SCORE</div>
-        <div id="p2-score" class="ph-score">0</div>
-        <div id="p2-streak" class="ph-streak hidden"><span id="p2-streak-val">0</span> streak</div>
-      </div>
 
       <!-- Streak-bonus toasts -->
       <div id="p1-toast" class="streak-toast"></div>
@@ -138,6 +137,10 @@
                    placeholder="School / club (optional)" autocomplete="off"
                    autocapitalize="words" autocorrect="off" spellcheck="false"
                    enterkeyhint="done" aria-label="School or club (optional)" />
+            <button id="btn-submit-score" class="big-cta submit-score" type="button">
+              <span class="cta-main">SUBMIT SCORE</span>
+              <span class="cta-sub">Return to welcome screen</span>
+            </button>
           </div>
         </div>
 
@@ -175,12 +178,11 @@
             <div class="bc-streak">best streak <span id="br-p2-streak">0</span></div>
           </div>
         </div>
-        <div class="result-buttons">
-          <button id="btn-rematch" class="big-cta" type="button">
-            <span class="cta-main">REMATCH</span>
-            <span class="cta-sub">Tap / Press any key</span>
+        <div class="result-buttons battle-menu-only">
+          <button id="btn-battle-menu" class="big-cta" type="button">
+            <span class="cta-main">MAIN MENU</span>
+            <span class="cta-sub">Return to welcome screen</span>
           </button>
-          <button id="btn-battle-menu" class="text-btn" type="button">Main menu</button>
         </div>
       </div>
     </div>
