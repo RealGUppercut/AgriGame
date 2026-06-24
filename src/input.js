@@ -40,7 +40,7 @@ export function initInput(handlers) {
     const ae = document.activeElement;
     if (ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) {
       any();
-      if (e.key === "Enter") { e.preventDefault(); ae.blur(); h.onStart && h.onStart(); }
+      if (e.key === "Enter") { e.preventDefault(); ae.blur(); }
       return;
     }
 
@@ -55,17 +55,16 @@ export function initInput(handlers) {
     if (e.key === " " || e.key === "Enter" || e.key === "Spacebar") {
       e.preventDefault(); any(); h.onStart && h.onStart(); return;
     }
-    // Any other key counts as activity and advances menus (no preventDefault,
-    // so F11 fullscreen etc. still work).
+    // Any other key counts as activity only; it should not skip post-game forms.
     any();
-    h.onStart && h.onStart();
   }, { passive: false });
 
   // ---- Pointer buttons ----
   const bind = (id, fn) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener("pointerdown", (e) => { e.preventDefault(); any(); fn(); });
+    const run = (e) => { e.preventDefault(); any(); fn(); };
+    el.addEventListener("pointerdown", run);
   };
   bind("p1-harvest", () => h.onAction && h.onAction(0, "harvest"));
   bind("p1-remove", () => h.onAction && h.onAction(0, "remove"));
@@ -74,12 +73,28 @@ export function initInput(handlers) {
 
   bind("btn-start", () => h.onStart && h.onStart());
   bind("btn-again", () => h.onStart && h.onStart());
-  bind("btn-rematch", () => h.onStart && h.onStart());
-  bind("btn-solo", () => h.onSelectMode && h.onSelectMode("solo"));
-  bind("btn-battle", () => h.onSelectMode && h.onSelectMode("battle"));
+
+  const activateModeCard = (card) => {
+    if (!card) return;
+    h.onSelectMode && h.onSelectMode(card.id === "btn-battle" ? "battle" : "solo");
+  };
   bind("btn-mode-back", () => h.onHome && h.onHome());
   bind("btn-results-menu", () => h.onHome && h.onHome());
   bind("btn-battle-menu", () => h.onHome && h.onHome());
+  bind("btn-submit-score", () => h.onSubmitScore ? h.onSubmitScore() : (h.onHome && h.onHome()));
+
+  const modeCards = document.querySelector(".mode-cards");
+  if (modeCards) {
+    const onModePick = (e) => {
+      const card = e.target.closest && e.target.closest(".mode-card");
+      if (!card) return;
+      e.preventDefault();
+      any();
+      activateModeCard(card);
+    };
+    modeCards.addEventListener("pointerdown", onModePick);
+    modeCards.addEventListener("click", onModePick);
+  }
 
   // Tap the welcome screen to advance (guarded in game). Results/battle screens
   // use their explicit buttons (they contain form fields / multiple choices).
