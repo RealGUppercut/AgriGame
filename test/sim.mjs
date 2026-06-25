@@ -27,7 +27,7 @@ const fakeScene = {
   ensureCamera2() { this.camera2 = this.camera2 || {}; return this.camera2; },
   setMode() {}, setIntensity() {}, pulseBloom() {}, update() {}, add() {},
 };
-const fakeWorld = { setRigs() {}, layoutRigs() {}, update() {}, reset() {}, setIntensity() {}, addShake() {}, setZoneHalf() {} };
+const fakeWorld = { setRigs() {}, layoutRigs() {}, update() {}, reset() {}, setIntensity() {}, addShake() {}, setZoneDepth() {} };
 const hudLog = { toasts: 0, battle: null };
 const fakeHud = {
   setMode() {}, setScore() {}, setStreak() {}, resetStreak() {},
@@ -253,20 +253,20 @@ console.log("\n[11] Crop Battle: 2 players, identical spawns, independent winner
 console.log("\n[12] Timing precision creates a score spread");
 {
   const { game } = makeGame();
-  const c = TUNE.zone.centerZ, h = TUNE.zone.halfDepthStart;
-  const centre = game._precisionFor(c);
-  const edge = game._precisionFor(c + h * 0.98);
-  ok(centre.cls === "perfect", "dead-centre is a PERFECT hit");
-  ok(centre.mult > edge.mult, "centre worth more than edge (x" + centre.mult + " > x" + edge.mult + ")");
-  const ptsCentre = Math.round(TUNE.scoring.basePoints * centre.mult);
-  const ptsEdge = Math.round(TUNE.scoring.basePoints * edge.mult);
-  ok(ptsCentre >= ptsEdge * 2, "perfect timing worth >=2x a sloppy hit (" + ptsCentre + " vs " + ptsEdge + ")");
-  // the action band shrinks over the round
+  const line = TUNE.zone.lineZ, depth = TUNE.zone.depthStart;
+  const onLine = game._precisionFor(line);              // d=0 → PERFECT
+  const far = game._precisionFor(line - depth * 0.98);  // d≈0.98 → Good
+  ok(onLine.cls === "perfect", "on the hit line is a PERFECT hit");
+  ok(onLine.mult > far.mult, "on-line worth more than far edge (x" + onLine.mult + " > x" + far.mult + ")");
+  const ptsLine = Math.round(TUNE.scoring.basePoints * onLine.mult);
+  const ptsFar = Math.round(TUNE.scoring.basePoints * far.mult);
+  ok(ptsLine >= ptsFar * 2, "perfect timing worth >=2x a sloppy hit (" + ptsLine + " vs " + ptsFar + ")");
+  // the band shrinks over the round
   game.state = "playing"; game.roundTime = 0;
-  const hStart = game._zoneHalf();
+  const dStart = game._zoneDepth();
   game.roundTime = TUNE.round.durationSec;
-  const hEnd = game._zoneHalf();
-  ok(hStart > hEnd, "action band shrinks over the round (" + hStart.toFixed(1) + " → " + hEnd.toFixed(1) + ")");
+  const dEnd = game._zoneDepth();
+  ok(dStart > dEnd, "band shrinks over the round (" + dStart.toFixed(1) + " → " + dEnd.toFixed(1) + ")");
 }
 
 console.log("\n[13] Leaderboard clear");

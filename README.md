@@ -122,7 +122,7 @@ Change the key sets in `TUNE.battle.keysP1` / `keysP2` in `src/config.js`.
 | **Difficulty ramp — speed** | `difficulty.speedStart` → `difficulty.speedEnd` |
 | **Difficulty ramp — density** | `difficulty.gapStart` → `difficulty.gapEnd` (smaller = more items) |
 | **Ramp shape** | `difficulty.rampCurve` (0 = linear, higher = stays easy longer then ramps) |
-| **Timing-window generosity** | `zone.halfDepthStart` / `zone.halfDepthEnd` — the coloured action band starts generous and shrinks to the end value over the round (bigger = easier/longer window). Raise both to make it easier; widen the gap for a steeper difficulty ramp |
+| **Timing-window generosity** | `zone.depthStart` / `zone.depthEnd` — the coloured band reaches this far back from the PERFECT hit line; it starts generous and shrinks over the round (bigger = easier/longer window). `zone.lineZ` moves the hit line up/down the view |
 | **Points per hit (baseline)** | `scoring.basePoints` (there is **no** runaway multiplier) |
 | **Score spread / skill ceiling** | `scoring.precision` tiers — points scale with how centred the item is in the action band when you act (PERFECT/Great/Good). Raise the `mult`s or tighten the `maxD`s for a wider spread between casual and precise players |
 | **Miss harshness** | `scoring.missPenalty` (kept at **0** — the streak just resets) |

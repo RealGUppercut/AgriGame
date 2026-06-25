@@ -36,13 +36,13 @@ export class Items {
       this.freeWeeds.push(m);
     }
 
-    this.setZone(TUNE.zone.halfDepthStart);
+    this.setZone(TUNE.zone.depthStart);
   }
 
-  /** Set the current action-band half-depth (it shrinks over the round). */
-  setZone(half) {
-    this.zNear = TUNE.zone.centerZ - half;
-    this.zFar = TUNE.zone.centerZ + half;
+  /** Set the current band depth (the far edge pulls in toward the line). */
+  setZone(depth) {
+    this.zNear = TUNE.zone.lineZ - depth; // far edge (up the field)
+    this.zFar = TUNE.zone.lineZ;          // the hit line / pass threshold
   }
 
   /** Toggle shadow casting (off in split-screen to avoid cross-view leakage). */
@@ -53,7 +53,7 @@ export class Items {
     this.active.forEach((r) => apply(r.mesh));
   }
 
-  get zoneCenter() { return TUNE.zone.centerZ; }
+  get zoneCenter() { return TUNE.zone.lineZ; }
 
   spawn(type, lane, opts = {}) {
     const pool = type === "weed" ? this.freeWeeds : this.freeCarrots;

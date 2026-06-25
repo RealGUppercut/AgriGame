@@ -57,7 +57,7 @@ export class World {
     this.fields = [];
     this.rigs = new Map();   // camera -> rig
     this.activeRigs = [];
-    this._zoneStartHalf = TUNE.zone.halfDepthStart;
+    this._zoneStartDepth = TUNE.zone.depthStart;
     this.zoneScaleZ = 1;     // marker shrinks with the action band
 
     sceneMgr.scene.background = assets.createSkyTexture();
@@ -69,7 +69,7 @@ export class World {
     this._buildHills();
 
     this.zone = assets.createZoneMarker(
-      TUNE.zone.centerZ, TUNE.zone.halfDepthStart, TUNE.spawn.lanesX, TUNE.scoring.precision
+      TUNE.zone.lineZ, TUNE.zone.depthStart, TUNE.spawn.lanesX, TUNE.scoring.precision
     );
     sceneMgr.add(this.zone);
 
@@ -235,9 +235,9 @@ export class World {
     }
   }
 
-  /** Scale the coloured target to the current action-band half-depth. */
-  setZoneHalf(half) {
-    this.zoneScaleZ = half / this._zoneStartHalf;
+  /** Scale the coloured target to the current band depth. */
+  setZoneDepth(depth) {
+    this.zoneScaleZ = depth / this._zoneStartDepth;
   }
 
   reset() {

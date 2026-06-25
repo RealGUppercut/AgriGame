@@ -352,57 +352,44 @@ export class Assets {
   }
 
   /**
-   * Colour-coded action band on the ground: one coloured strip per precision
-   * tier (colour = points), as non-overlapping rings out from the centre. The
-   * group is centred at centerZ and scaled in Z by the caller as the band
-   * shrinks over the round.
+   * Colour-coded action band on the ground (rhythm-game target): the PERFECT
+   * "hit line" sits at lineZ (near the bottom of the view) and the Great/Good
+   * zones extend AWAY up the field — one coloured strip per precision tier
+   * (colour = points), drawn from the line outward, no near-side rings. The
+   * group sits at lineZ and is scaled in Z by the caller as the band shrinks.
    */
-  createZoneMarker(centerZ, halfStart, lanesX, tiers) {
+  createZoneMarker(lineZ, depthStart, lanesX, tiers) {
     const group = new THREE.Group();
-    group.position.set(0, 0.02, centerZ);
+    group.position.set(0, 0.02, lineZ);
     const width = Math.abs(lanesX[lanesX.length - 1] - lanesX[0]) + 4.5;
 
-    // tiers small→large maxD (PERFECT, Great, Good); draw a central strip for
-    // the innermost and a pair of side strips for each outer ring.
+    // tiers small→large maxD (PERFECT, Great, Good). Tier i covers dNorm
+    // [inner, outer] → local z (away from the line) [-outer*depth, -inner*depth].
     const sorted = [...tiers].sort((a, b) => a.maxD - b.maxD);
-    const strip = (depth, zc, color, yi) => {
-      const geo = new THREE.PlaneGeometry(width, depth);
-      const mat = new THREE.MeshBasicMaterial({
-        color, transparent: true, opacity: 0.5, depthWrite: false,
-      });
-      const m = new THREE.Mesh(geo, mat);
-      m.rotation.x = -Math.PI / 2;
-      m.position.set(0, yi * 0.002, zc);
-      m.renderOrder = 2 + yi;
-      m.userData.geo = geo;
-      group.add(m);
-      return m;
-    };
     sorted.forEach((t, i) => {
       const inner = i === 0 ? 0 : sorted[i - 1].maxD;
       const outer = t.maxD;
-      if (i === 0) {
-        strip(2 * halfStart * outer, 0, t.color, i);            // central strip
-      } else {
-        const d = halfStart * (outer - inner);
-        const c = halfStart * (inner + outer) / 2;
-        strip(d, +c, t.color, i);                               // far side
-        strip(d, -c, t.color, i);                               // near side
-      }
+      const d = depthStart * (outer - inner);
+      const zc = -depthStart * (inner + outer) / 2;
+      const geo = new THREE.PlaneGeometry(width, d);
+      const mat = new THREE.MeshBasicMaterial({ color: t.color, transparent: true, opacity: 0.5, depthWrite: false });
+      const m = new THREE.Mesh(geo, mat);
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(0, i * 0.002, zc);
+      m.renderOrder = 2 + i;
+      m.userData.geo = geo;
+      group.add(m);
     });
 
-    // Bright edges around the PERFECT centre (catch the bloom = a "bullseye").
-    const pd = halfStart * sorted[0].maxD;
-    const edgeGeo = new THREE.BoxGeometry(width, 0.05, 0.14);
-    const edgeMat = new THREE.MeshBasicMaterial({ color: 0xfff3b0, transparent: true, opacity: 0.9 });
-    const front = new THREE.Mesh(edgeGeo, edgeMat);
-    const back = new THREE.Mesh(edgeGeo, edgeMat);
-    front.position.set(0, 0.04, pd);
-    back.position.set(0, 0.04, -pd);
-    front.renderOrder = back.renderOrder = 9;
-    group.add(front, back);
+    // Bright "hit line" at the near edge (catches the bloom; the act-here cue).
+    const edgeGeo = new THREE.BoxGeometry(width, 0.05, 0.16);
+    const edgeMat = new THREE.MeshBasicMaterial({ color: 0xfff3b0, transparent: true, opacity: 0.95 });
+    const line = new THREE.Mesh(edgeGeo, edgeMat);
+    line.position.set(0, 0.05, 0);
+    line.renderOrder = 9;
+    group.add(line);
 
-    group.userData.edges = [front, back];
+    group.userData.edges = [line];
     group.userData.edgeGeo = edgeGeo;
     group.userData.edgeMat = edgeMat;
     return group;

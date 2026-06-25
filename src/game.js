@@ -195,12 +195,12 @@ export class Game {
   _speed() { return lerp(TUNE.difficulty.speedStart, TUNE.difficulty.speedEnd, this._ramp()); }
   _gap() { return lerp(TUNE.difficulty.gapStart, TUNE.difficulty.gapEnd, this._ramp()); }
 
-  /** Current action-band half-depth: generous at the start, shrinks while playing. */
-  _zoneHalf() {
+  /** Current band depth: generous at the start, shrinks toward the line while playing. */
+  _zoneDepth() {
     if (this.state === "playing") {
-      return lerp(TUNE.zone.halfDepthStart, TUNE.zone.halfDepthEnd, this._ramp());
+      return lerp(TUNE.zone.depthStart, TUNE.zone.depthEnd, this._ramp());
     }
-    return TUNE.zone.halfDepthStart;
+    return TUNE.zone.depthStart;
   }
 
   _decideSpawn() {
@@ -216,8 +216,8 @@ export class Game {
 
   _prefill() {
     const speed = this._speed(), gap = this._gap();
-    const zNear = this.players[0].items.zNear;
-    let z = zNear - speed * 1.3;
+    // nearest prefilled crop ~1s from the hit line, then fill back up the row
+    let z = TUNE.zone.lineZ - speed * 1.0;
     while (z > TUNE.spawn.startZ) {
       const s = this._decideSpawn();
       this._spawnAll(s.type, s.lane, z, true);
@@ -244,7 +244,7 @@ export class Game {
 
   /** Precision tier (PERFECT / Great / Good) for an item at row-depth z. */
   _precisionFor(z) {
-    const d = Math.abs(z - TUNE.zone.centerZ) / this._zoneHalf();
+    const d = (TUNE.zone.lineZ - z) / this._zoneDepth(); // 0 = on the line
     const tiers = TUNE.scoring.precision;
     for (const t of tiers) if (d <= t.maxD) return t;
     return tiers[tiers.length - 1];
@@ -326,10 +326,10 @@ export class Game {
         return;
       }
     }
-    // Apply the current (shrinking) action-band size to the items and the marker.
-    const zHalf = this._zoneHalf();
-    this.world.setZoneHalf(zHalf);
-    for (const p of this.players) p.items.setZone(zHalf);
+    // Apply the current (shrinking) band depth to the items and the marker.
+    const zDepth = this._zoneDepth();
+    this.world.setZoneDepth(zDepth);
+    for (const p of this.players) p.items.setZone(zDepth);
 
     switch (this.state) {
       case "attract":
