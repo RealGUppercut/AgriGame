@@ -75,6 +75,12 @@ export function addScore(score, combo, name = "", org = "") {
   return { rank, isBest: rank === 1, ts: entry.ts, scores: data.scores.slice() };
 }
 
+/** Wipe the whole board (staff "clear leaderboard" action). */
+export function clearScores() {
+  mem = null;
+  try { window.localStorage.removeItem(KEY); } catch (_) { /* ignore */ }
+}
+
 /** Update the name/org of a previously-added entry (by ts). Returns the board. */
 export function updateScore(ts, name, org) {
   const data = load();

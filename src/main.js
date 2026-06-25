@@ -98,6 +98,37 @@ async function boot() {
     });
   }
 
+  // ---- Staff "clear leaderboard": hold ~1.2s to confirm ----
+  const clearBtn = document.getElementById("btn-clear");
+  if (clearBtn) {
+    const label = clearBtn.querySelector(".cb-label");
+    let holdTimer = 0;
+    const arm = (e) => {
+      e.preventDefault();
+      e.stopPropagation(); // don't let the welcome-screen "tap to start" fire
+      game.noteInput();
+      clearBtn.classList.remove("cleared");
+      clearBtn.classList.add("arming");
+      holdTimer = setTimeout(() => {
+        storage.clearScores();
+        hud.showAttractScores(storage.getTopScores());
+        clearBtn.classList.remove("arming");
+        clearBtn.classList.add("cleared");
+        if (label) label.textContent = "Board cleared";
+        setTimeout(() => { if (label) label.textContent = "Hold to clear board"; clearBtn.classList.remove("cleared"); }, 1600);
+        holdTimer = 0;
+      }, 1200);
+    };
+    const cancel = () => {
+      if (holdTimer) { clearTimeout(holdTimer); holdTimer = 0; }
+      clearBtn.classList.remove("arming");
+    };
+    clearBtn.addEventListener("pointerdown", arm);
+    clearBtn.addEventListener("pointerup", cancel);
+    clearBtn.addEventListener("pointerleave", cancel);
+    clearBtn.addEventListener("pointercancel", cancel);
+  }
+
   // ---- Solo results name / organisation entry (saves live as they type) ----
   const nameInput = document.getElementById("name-input");
   const orgInput = document.getElementById("org-input");

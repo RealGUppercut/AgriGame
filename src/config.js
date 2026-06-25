@@ -40,12 +40,22 @@ export const TUNE = {
   },
 
   scoring: {
-    basePoints:     100,    // flat points for any correct action
+    basePoints:     100,    // baseline points for a correct action
     missPenalty:    0,      // points lost on a miss (kept at 0 for kids)
-    // ---- Streak bonuses (the ONLY score growth; no runaway multiplier) -----
-    // Every `bonusEvery` correct-in-a-row awards a small flat bonus. The bonus
-    // grows a little per milestone but is capped, so a lead only becomes large
-    // with VERY high sustained accuracy (any miss resets the streak).
+
+    // ---- Timing precision (creates the score spread / skill ceiling) -------
+    // Points scale with HOW CENTRED the item is in the action band when you act.
+    //   dNorm = |item.z - zone.centerZ| / zone.halfDepth   (0 = dead centre, 1 = edge)
+    // Acting any time still scores ("Good"), but nailing the centre scores far
+    // more — so good players pull clearly ahead instead of everyone maxing out.
+    // points = round(basePoints * mult). Tiers are tried in order (first match).
+    precision: [
+      { maxD: 0.30, mult: 1.6, label: "PERFECT!", cls: "perfect" },
+      { maxD: 0.62, mult: 1.1, label: "Great" },
+      { maxD: 1.01, mult: 0.6, label: "Good" },
+    ],
+
+    // ---- Streak bonuses (small, capped; reward sustained accuracy) ----------
     streakBonusEvery: 5,    // award a bonus every N in a row
     streakBonusStep:  20,   // bonus = step * milestone#  (1st=20, 2nd=40, ...)
     streakBonusMax:   120,  // ...capped here

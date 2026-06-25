@@ -117,7 +117,8 @@ Change the key sets in `TUNE.battle.keysP1` / `keysP2` in `src/config.js`.
 | **Difficulty ramp — density** | `difficulty.gapStart` → `difficulty.gapEnd` (smaller = more items) |
 | **Ramp shape** | `difficulty.rampCurve` (0 = linear, higher = stays easy longer then ramps) |
 | **Timing-window generosity** | `zone.halfDepth` — **the main "make it easier" knob** (bigger = longer window) |
-| **Points per hit** | `scoring.basePoints` (flat — there is **no** runaway multiplier) |
+| **Points per hit (baseline)** | `scoring.basePoints` (there is **no** runaway multiplier) |
+| **Score spread / skill ceiling** | `scoring.precision` tiers — points scale with how centred the item is in the action band when you act (PERFECT/Great/Good). Raise the `mult`s or tighten the `maxD`s for a wider spread between casual and precise players |
 | **Miss harshness** | `scoring.missPenalty` (kept at **0** — the streak just resets) |
 | **Streak bonus size** | `scoring.streakBonusEvery` (bonus every N in a row), `streakBonusStep`, `streakBonusMax` — keep these small so leads stay catchable |
 | **Streak puns** | `STREAK_PUNS` array in `src/config.js` |
@@ -172,6 +173,10 @@ size in `src/scene.js`.
   in-memory fallback if storage is unavailable. When a run makes the board, the
   results screen invites the player to enter a **name** and optional
   **school / club**, saved live as they type and shown on the leaderboard.
+- **Clearing the leaderboard (staff):** on the welcome screen, **press and hold
+  the small "Hold to clear board" button (bottom-right) for ~1.2s** — it fills
+  up and wipes today's scores. It's hold-to-confirm so children can't clear it
+  by accident, and it only works on the welcome screen.
 - Sound is **off by default** (synthesized SFX, no files, no autoplay) with a toggle;
   the game never relies on audio for clarity.
 

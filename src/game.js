@@ -234,11 +234,23 @@ export class Game {
     else this._wrong(p, target, kind);
   }
 
+  /** Precision tier (PERFECT / Great / Good) for an item at row-depth z. */
+  _precisionFor(z) {
+    const d = Math.abs(z - TUNE.zone.centerZ) / TUNE.zone.halfDepth;
+    const tiers = TUNE.scoring.precision;
+    for (const t of tiers) if (d <= t.maxD) return t;
+    return tiers[tiers.length - 1];
+  }
+
   _success(p, target, kind) {
     p.streak += 1;
     p.bestStreak = Math.max(p.bestStreak, p.streak);
 
-    let points = TUNE.scoring.basePoints;
+    // Timing precision → variable per-hit points (this is the score spread).
+    const tier = this._precisionFor(target.z);
+    const hitPoints = Math.round(TUNE.scoring.basePoints * tier.mult);
+    let points = hitPoints;
+
     let bonus = 0;
     if (p.streak % TUNE.scoring.streakBonusEvery === 0) {
       const m = p.streak / TUNE.scoring.streakBonusEvery;
@@ -256,16 +268,18 @@ export class Game {
     p.items.popSuccess(target);
     const intensity = clamp(p.streak / TUNE.streak.intensityFull, 0, 1);
     p.particles.burst(target.x, 0.4, target.z, target.type, 1 + intensity * 0.5);
-    p.floaters.spawn({ x: target.x, y: 1.2, z: target.z }, "+" + TUNE.scoring.basePoints);
+    // "+points" floats off the crop; PERFECT hits get extra sparkle (tier.cls).
+    p.floaters.spawn({ x: target.x, y: 1.2, z: target.z }, "+" + hitPoints, tier.cls);
 
     this.hud.setScore(p.index, p.score);
     this.hud.setStreak(p.index, p.streak);
     this.hud.flashGood(p.index);
     if (kind === "harvest") this.audio.harvest(); else this.audio.remove();
+    if (tier.cls === "perfect") this.audio.perfect();
 
     this.world.setIntensity(p.index, intensity);
     if (p.index === 0) this.scene.setIntensity(intensity);
-    this.scene.pulseBloom(0.18 + intensity * 0.3);
+    this.scene.pulseBloom(0.18 + intensity * 0.3 + (tier.cls === "perfect" ? 0.3 : 0));
     if (bonus === 0 && intensity > 0.4) this.world.addShake(p.index, 0.1 * intensity);
   }
 

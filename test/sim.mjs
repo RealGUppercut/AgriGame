@@ -38,7 +38,7 @@ const fakeHud = {
 };
 const fakeAudio = {
   muted: true, unlock() {}, start() {}, harvest() {}, remove() {}, combo() {}, streakBonus() {},
-  miss() {}, tick() {}, go() {}, results() {}, resume() {}, toggle() { return true; },
+  perfect() {}, miss() {}, tick() {}, go() {}, results() {}, resume() {}, toggle() { return true; },
 };
 const fxLog = { bonus: 0, oops: 0 };
 const mkMockPlayer = (index, layer) => ({
@@ -248,6 +248,27 @@ console.log("\n[11] Crop Battle: 2 players, identical spawns, independent winner
   ok(game.state === "battleResults", "battle ends → battle results");
   ok(players[0].score > players[1].score, "active player outscored idle player");
   ok(hudLog.battle && hudLog.battle.winner === 0, "winner reported as Player 1");
+}
+
+console.log("\n[12] Timing precision creates a score spread");
+{
+  const { game } = makeGame();
+  const c = TUNE.zone.centerZ, h = TUNE.zone.halfDepth;
+  const centre = game._precisionFor(c);
+  const edge = game._precisionFor(c + h * 0.98);
+  ok(centre.cls === "perfect", "dead-centre is a PERFECT hit");
+  ok(centre.mult > edge.mult, "centre worth more than edge (x" + centre.mult + " > x" + edge.mult + ")");
+  const ptsCentre = Math.round(TUNE.scoring.basePoints * centre.mult);
+  const ptsEdge = Math.round(TUNE.scoring.basePoints * edge.mult);
+  ok(ptsCentre >= ptsEdge * 2, "perfect timing worth >=2x a sloppy hit (" + ptsCentre + " vs " + ptsEdge + ")");
+}
+
+console.log("\n[13] Leaderboard clear");
+{
+  storage.addScore(500, 3, "Tester", "");
+  ok(storage.getTopScores().length > 0, "board has entries");
+  storage.clearScores();
+  ok(storage.getTopScores().length === 0, "clearScores() empties the board");
 }
 
 console.log("\n" + (failures === 0 ? "ALL CHECKS PASSED ✅" : failures + " CHECK(S) FAILED ❌"));

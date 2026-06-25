@@ -124,6 +124,15 @@ export const audio = {
     } catch (_) {}
   },
 
+  /** Bright little ping for a dead-centre PERFECT hit. */
+  perfect() {
+    if (!ensure()) return;
+    try {
+      tone(1180, 0.09, { type: "triangle", gain: 0.22, glideTo: 1760 });
+      noise(0.05, { gain: 0.08, type: "highpass", freq: 6000 });
+    } catch (_) {}
+  },
+
   /** A cool little 3-note sparkle for a streak-bonus milestone. */
   streakBonus(milestone) {
     if (!ensure()) return;

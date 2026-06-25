@@ -475,6 +475,12 @@ html, body {
   animation: float-up 0.95s ease-out forwards; /* points/oops timing (unchanged) */
 }
 .floater.bad { color: #ff8e7a; text-shadow: 0 2px 0 rgba(0,0,0,0.4), 0 0 12px rgba(255,80,50,0.6); }
+/* PERFECT (dead-centre timing) — bigger, brighter, extra sparkle. */
+.floater.perfect {
+  color: #fff3b0;
+  font-size: clamp(30px, 5.4vw, 54px);
+  text-shadow: 0 2px 0 rgba(0,0,0,0.45), 0 0 22px rgba(255,224,120,1);
+}
 /* Streak message: ~15% larger AND lingers long enough to read (own animation). */
 .floater.bonus {
   color: #d6ffb0;
@@ -493,6 +499,37 @@ html, body {
   78%  { opacity: 1; transform: translate(-50%, -92%) scale(1); }
   100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
 }
+
+/* ---- Staff "clear leaderboard" (hold-to-confirm) ------------------------- */
+#btn-clear {
+  position: absolute;
+  bottom: clamp(8px, 2vh, 16px);
+  right: clamp(10px, 2.5vw, 24px);
+  pointer-events: auto;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.55);
+  font-family: var(--font);
+  font-weight: 600;
+  font-size: clamp(10px, 1.5vw, 13px);
+  letter-spacing: 1px;
+  cursor: pointer;
+}
+#btn-clear .cb-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  background: var(--remove-btn);
+  opacity: 0.55;
+}
+#btn-clear.arming .cb-fill { width: 100%; transition: width 1.2s linear; }
+#btn-clear .cb-label { position: relative; z-index: 1; }
+#btn-clear.cleared { color: #fff; border-color: var(--carrot-top); }
 
 /* ====================== SOUND TOGGLE ====================================== */
 #sound-toggle {
