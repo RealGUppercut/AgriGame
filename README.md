@@ -18,11 +18,12 @@ The game uses ES modules, so Chrome must load it over `http://` (not `file://`).
 Serve the project folder with **one** of these one-liners, then open the URL.
 
 ```bash
-# Option A — Python (pre-installed on most machines)
-python3 -m http.server 8000
+# Recommended while iterating — no-cache server (always loads the latest files)
+python3 serve.py 8000
 
-# Option B — Node
-npx serve -l 8000
+# Or the plain one-liners:
+python3 -m http.server 8000      # Python
+npx serve -l 8000                # Node
 ```
 
 Then open:
@@ -30,6 +31,11 @@ Then open:
 ```
 http://localhost:8000/
 ```
+
+> **Caching note:** browsers cache ES modules, so after pulling an update a plain
+> refresh can load a new `game.js` against an old cached `world.js` and error out
+> (e.g. *"this.world.&lt;x&gt; is not a function"*). Two ways to avoid it: use
+> **`serve.py`** (it disables caching), or do a **hard refresh** (Ctrl/Cmd+Shift+R).
 
 That's it. Everything (Three.js, the font, all 3D assets) is **vendored locally in
 `/vendor`** and generated at startup — **after the page loads, the game makes no
