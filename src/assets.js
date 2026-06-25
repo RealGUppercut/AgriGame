@@ -351,26 +351,60 @@ export class Assets {
     return sun;
   }
 
-  /** Glowing band on the ground marking where to act. */
-  createZoneMarker(centerZ, halfDepth, lanesX) {
+  /**
+   * Colour-coded action band on the ground: one coloured strip per precision
+   * tier (colour = points), as non-overlapping rings out from the centre. The
+   * group is centred at centerZ and scaled in Z by the caller as the band
+   * shrinks over the round.
+   */
+  createZoneMarker(centerZ, halfStart, lanesX, tiers) {
     const group = new THREE.Group();
+    group.position.set(0, 0.02, centerZ);
     const width = Math.abs(lanesX[lanesX.length - 1] - lanesX[0]) + 4.5;
 
-    const fill = new THREE.Mesh(new THREE.PlaneGeometry(width, halfDepth * 2), this.mat.zoneFill);
-    fill.rotation.x = -Math.PI / 2;
-    fill.position.set(0, 0.02, centerZ);
-    group.add(fill);
+    // tiers small→large maxD (PERFECT, Great, Good); draw a central strip for
+    // the innermost and a pair of side strips for each outer ring.
+    const sorted = [...tiers].sort((a, b) => a.maxD - b.maxD);
+    const strip = (depth, zc, color, yi) => {
+      const geo = new THREE.PlaneGeometry(width, depth);
+      const mat = new THREE.MeshBasicMaterial({
+        color, transparent: true, opacity: 0.5, depthWrite: false,
+      });
+      const m = new THREE.Mesh(geo, mat);
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(0, yi * 0.002, zc);
+      m.renderOrder = 2 + yi;
+      m.userData.geo = geo;
+      group.add(m);
+      return m;
+    };
+    sorted.forEach((t, i) => {
+      const inner = i === 0 ? 0 : sorted[i - 1].maxD;
+      const outer = t.maxD;
+      if (i === 0) {
+        strip(2 * halfStart * outer, 0, t.color, i);            // central strip
+      } else {
+        const d = halfStart * (outer - inner);
+        const c = halfStart * (inner + outer) / 2;
+        strip(d, +c, t.color, i);                               // far side
+        strip(d, -c, t.color, i);                               // near side
+      }
+    });
 
-    const edgeGeo = new THREE.BoxGeometry(width, 0.06, 0.18);
-    const front = new THREE.Mesh(edgeGeo, this.mat.zoneEdge);
-    const back = new THREE.Mesh(edgeGeo, this.mat.zoneEdge);
-    front.position.set(0, 0.06, centerZ + halfDepth);
-    back.position.set(0, 0.06, centerZ - halfDepth);
+    // Bright edges around the PERFECT centre (catch the bloom = a "bullseye").
+    const pd = halfStart * sorted[0].maxD;
+    const edgeGeo = new THREE.BoxGeometry(width, 0.05, 0.14);
+    const edgeMat = new THREE.MeshBasicMaterial({ color: 0xfff3b0, transparent: true, opacity: 0.9 });
+    const front = new THREE.Mesh(edgeGeo, edgeMat);
+    const back = new THREE.Mesh(edgeGeo, edgeMat);
+    front.position.set(0, 0.04, pd);
+    back.position.set(0, 0.04, -pd);
+    front.renderOrder = back.renderOrder = 9;
     group.add(front, back);
 
-    group.userData.fill = fill;
     group.userData.edges = [front, back];
     group.userData.edgeGeo = edgeGeo;
+    group.userData.edgeMat = edgeMat;
     return group;
   }
 

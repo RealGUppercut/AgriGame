@@ -27,7 +27,7 @@ const fakeScene = {
   ensureCamera2() { this.camera2 = this.camera2 || {}; return this.camera2; },
   setMode() {}, setIntensity() {}, pulseBloom() {}, update() {}, add() {},
 };
-const fakeWorld = { setRigs() {}, layoutRigs() {}, update() {}, reset() {}, setIntensity() {}, addShake() {} };
+const fakeWorld = { setRigs() {}, layoutRigs() {}, update() {}, reset() {}, setIntensity() {}, addShake() {}, setZoneHalf() {} };
 const hudLog = { toasts: 0, battle: null };
 const fakeHud = {
   setMode() {}, setScore() {}, setStreak() {}, resetStreak() {},
@@ -253,7 +253,7 @@ console.log("\n[11] Crop Battle: 2 players, identical spawns, independent winner
 console.log("\n[12] Timing precision creates a score spread");
 {
   const { game } = makeGame();
-  const c = TUNE.zone.centerZ, h = TUNE.zone.halfDepth;
+  const c = TUNE.zone.centerZ, h = TUNE.zone.halfDepthStart;
   const centre = game._precisionFor(c);
   const edge = game._precisionFor(c + h * 0.98);
   ok(centre.cls === "perfect", "dead-centre is a PERFECT hit");
@@ -261,6 +261,12 @@ console.log("\n[12] Timing precision creates a score spread");
   const ptsCentre = Math.round(TUNE.scoring.basePoints * centre.mult);
   const ptsEdge = Math.round(TUNE.scoring.basePoints * edge.mult);
   ok(ptsCentre >= ptsEdge * 2, "perfect timing worth >=2x a sloppy hit (" + ptsCentre + " vs " + ptsEdge + ")");
+  // the action band shrinks over the round
+  game.state = "playing"; game.roundTime = 0;
+  const hStart = game._zoneHalf();
+  game.roundTime = TUNE.round.durationSec;
+  const hEnd = game._zoneHalf();
+  ok(hStart > hEnd, "action band shrinks over the round (" + hStart.toFixed(1) + " → " + hEnd.toFixed(1) + ")");
 }
 
 console.log("\n[13] Leaderboard clear");

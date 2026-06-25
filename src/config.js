@@ -9,7 +9,8 @@
  *  Quick reference (also in README.md):
  *    • Round length .............. TUNE.round.durationSec
  *    • Difficulty ramp ........... TUNE.difficulty.*  (speed + spacing)
- *    • Timing-window generosity .. TUNE.zone.halfDepth (bigger = easier)
+ *    • Timing-window generosity .. TUNE.zone.halfDepthStart / halfDepthEnd
+ *                                  (the action band shrinks over the round)
  *    • How forgiving misses are .. TUNE.scoring.missPenalty (0 = none)
  *    • Crop / weed mix ........... TUNE.spawn.weedChance
  * ========================================================================== */
@@ -34,9 +35,11 @@ export const TUNE = {
 
   zone: {
     // The "action band" the player reacts in, measured along the row (Z).
-    // halfDepth is THE generosity knob: bigger band = longer timing window.
-    centerZ:    -7,         // distance in front of the camera
-    halfDepth:  5.2,        // half-thickness of the band (forgiving)
+    // It is generous at the start of a round and SHRINKS over time to ramp up
+    // difficulty (bigger band = longer/easier timing window).
+    centerZ:        -7,     // distance in front of the camera
+    halfDepthStart: 6.0,    // half-thickness at the start (very forgiving)
+    halfDepthEnd:   3.2,    // half-thickness by the end (tighter)
   },
 
   scoring: {
@@ -45,14 +48,15 @@ export const TUNE = {
 
     // ---- Timing precision (creates the score spread / skill ceiling) -------
     // Points scale with HOW CENTRED the item is in the action band when you act.
-    //   dNorm = |item.z - zone.centerZ| / zone.halfDepth   (0 = dead centre, 1 = edge)
+    //   dNorm = |item.z - zone.centerZ| / currentHalfDepth  (0 = dead centre)
     // Acting any time still scores ("Good"), but nailing the centre scores far
     // more — so good players pull clearly ahead instead of everyone maxing out.
+    // Each tier is drawn as a coloured band on the ground (colour = points).
     // points = round(basePoints * mult). Tiers are tried in order (first match).
     precision: [
-      { maxD: 0.30, mult: 1.6, label: "PERFECT!", cls: "perfect" },
-      { maxD: 0.62, mult: 1.1, label: "Great" },
-      { maxD: 1.01, mult: 0.6, label: "Good" },
+      { maxD: 0.30, mult: 1.6, label: "PERFECT!", cls: "perfect", color: 0xffe14a }, // gold
+      { maxD: 0.62, mult: 1.1, label: "Great",                    color: 0x6fd25c }, // green
+      { maxD: 1.01, mult: 0.6, label: "Good",                     color: 0x4fa6e0 }, // blue
     ],
 
     // ---- Streak bonuses (small, capped; reward sustained accuracy) ----------

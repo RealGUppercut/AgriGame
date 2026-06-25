@@ -57,6 +57,8 @@ export class World {
     this.fields = [];
     this.rigs = new Map();   // camera -> rig
     this.activeRigs = [];
+    this._zoneStartHalf = TUNE.zone.halfDepthStart;
+    this.zoneScaleZ = 1;     // marker shrinks with the action band
 
     sceneMgr.scene.background = assets.createSkyTexture();
 
@@ -66,7 +68,9 @@ export class World {
 
     this._buildHills();
 
-    this.zone = assets.createZoneMarker(TUNE.zone.centerZ, TUNE.zone.halfDepth, TUNE.spawn.lanesX);
+    this.zone = assets.createZoneMarker(
+      TUNE.zone.centerZ, TUNE.zone.halfDepthStart, TUNE.spawn.lanesX, TUNE.scoring.precision
+    );
     sceneMgr.add(this.zone);
 
     this._buildGrass();
@@ -222,14 +226,18 @@ export class World {
       }
     }
 
-    // Shared action-zone pulse (driven by the strongest streak intensity)
+    // Shared action-zone: gentle edge pulse + shrink to the current band size
     const pulse = 0.5 + 0.5 * Math.sin(this.scroll * 0.25);
     if (this.zone) {
-      this.zone.userData.fill.material.opacity = 0.12 + pulse * 0.12 + this.intensity * 0.1;
-      for (const e of this.zone.userData.edges) e.material.opacity = 0.6 + pulse * 0.4;
+      for (const e of this.zone.userData.edges) e.material.opacity = 0.55 + pulse * 0.4;
       const s = 1 + this.intensity * 0.04 * pulse;
-      this.zone.scale.set(s, 1, 1);
+      this.zone.scale.set(s, 1, this.zoneScaleZ);
     }
+  }
+
+  /** Scale the coloured target to the current action-band half-depth. */
+  setZoneHalf(half) {
+    this.zoneScaleZ = half / this._zoneStartHalf;
   }
 
   reset() {

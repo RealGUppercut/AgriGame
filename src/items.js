@@ -36,8 +36,13 @@ export class Items {
       this.freeWeeds.push(m);
     }
 
-    this.zNear = TUNE.zone.centerZ - TUNE.zone.halfDepth;
-    this.zFar = TUNE.zone.centerZ + TUNE.zone.halfDepth;
+    this.setZone(TUNE.zone.halfDepthStart);
+  }
+
+  /** Set the current action-band half-depth (it shrinks over the round). */
+  setZone(half) {
+    this.zNear = TUNE.zone.centerZ - half;
+    this.zFar = TUNE.zone.centerZ + half;
   }
 
   /** Toggle shadow casting (off in split-screen to avoid cross-view leakage). */

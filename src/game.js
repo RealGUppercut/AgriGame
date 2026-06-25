@@ -195,6 +195,14 @@ export class Game {
   _speed() { return lerp(TUNE.difficulty.speedStart, TUNE.difficulty.speedEnd, this._ramp()); }
   _gap() { return lerp(TUNE.difficulty.gapStart, TUNE.difficulty.gapEnd, this._ramp()); }
 
+  /** Current action-band half-depth: generous at the start, shrinks while playing. */
+  _zoneHalf() {
+    if (this.state === "playing") {
+      return lerp(TUNE.zone.halfDepthStart, TUNE.zone.halfDepthEnd, this._ramp());
+    }
+    return TUNE.zone.halfDepthStart;
+  }
+
   _decideSpawn() {
     return {
       type: Math.random() < TUNE.spawn.weedChance ? "weed" : "carrot",
@@ -236,7 +244,7 @@ export class Game {
 
   /** Precision tier (PERFECT / Great / Good) for an item at row-depth z. */
   _precisionFor(z) {
-    const d = Math.abs(z - TUNE.zone.centerZ) / TUNE.zone.halfDepth;
+    const d = Math.abs(z - TUNE.zone.centerZ) / this._zoneHalf();
     const tiers = TUNE.scoring.precision;
     for (const t of tiers) if (d <= t.maxD) return t;
     return tiers[tiers.length - 1];
@@ -318,6 +326,11 @@ export class Game {
         return;
       }
     }
+    // Apply the current (shrinking) action-band size to the items and the marker.
+    const zHalf = this._zoneHalf();
+    this.world.setZoneHalf(zHalf);
+    for (const p of this.players) p.items.setZone(zHalf);
+
     switch (this.state) {
       case "attract":
       case "menu": this._updateIdle(dt); break;
